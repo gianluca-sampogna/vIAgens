@@ -1,7 +1,19 @@
+"use client";
+
 import styles from './styles.module.css'
 import Link from 'next/link';
+import { useSession, signOut, signIn } from 'next-auth/react';
 
-const Header =() => {
+const Header = () => {
+  const { data: session, status } = useSession();
+
+  console.log('session', session)
+
+  const handleGoogleLogin = () => {
+      signIn("google", { callbackUrl: "/dashboard" });
+    };
+  
+
   return (
     <header className={styles.header}>
       <section className={styles.content}>
@@ -11,17 +23,28 @@ const Header =() => {
               v<span>IA</span>gens
             </h1>
           </Link>
-          {/* <Link href="/dashboard" className={styles.link}>
-            Meu Painel
-          </Link> */}
+          {session?.user && (
+            <Link href="/dashboard" className={styles.link}>
+              Meu Painel
+            </Link>
+          )}
         </nav>
 
-        <Link href={'/login'}>
+        {status === "loading" ? (
           <button className={styles.loginButton}>Acessar</button>
-        </Link>
+        ) : session ? (
+          <button onClick={() => signOut()} className={styles.loginButton}>
+            Olá, {session.user?.name?.split(" ")[0]} (Sair)
+          </button>
+        ) : (
+          // <Link href="/login">
+            <button className={styles.loginButton} onClick={handleGoogleLogin}>Acessar</button>
+          // </Link>
+        )}
       </section>
     </header>
   );
 }
 
-export {Header}
+export { Header }
+
