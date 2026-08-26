@@ -7,8 +7,6 @@ import { useSession, signOut, signIn } from 'next-auth/react';
 const Header = () => {
   const { data: session, status } = useSession();
 
-  console.log('session', session)
-
   const handleGoogleLogin = () => {
       signIn("google", { callbackUrl: "/dashboard" });
     };
