@@ -16,7 +16,9 @@ const Header =() => {
           </Link> */}
         </nav>
 
-        <button className={styles.loginButton}>Acessar</button>
+        <Link href={'/login'}>
+          <button className={styles.loginButton}>Acessar</button>
+        </Link>
       </section>
     </header>
   );
