@@ -21,11 +21,11 @@ const Header = () => {
               v<span>IA</span>gens
             </h1>
           </Link>
-          {session?.user && (
+          {/* {session?.user && (
             <Link href="/dashboard" className={styles.link}>
               Meu Painel
             </Link>
-          )}
+          )} */}
         </nav>
 
         {status === "loading" ? (
