@@ -6,7 +6,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'node:crypto';
-import type { StringValue } from 'ms';
 import { SupabaseService } from '../banco/supabase.service';
 
 export type ParDeTokens = {
@@ -18,15 +17,70 @@ export type PayloadAccessToken = {
   sub: string;
 };
 
+// Tipo derivado da superficie publica do @nestjs/jwt (parametro de
+// signAsync), em vez de importar 'ms' diretamente. O pacote 'ms' e apenas
+// dependencia transitiva de jsonwebtoken via @nestjs/jwt: nao esta
+// declarado no package.json deste projeto, entao depender dele diretamente
+// quebra sob hoisting diferente (ex.: pnpm) ou numa major do jsonwebtoken
+// que deixe de usa-lo.
+type OpcoesAssinatura = NonNullable<Parameters<JwtService['signAsync']>[1]>;
+type ExpiresIn = NonNullable<OpcoesAssinatura['expiresIn']>;
+
 const DIAS_PADRAO_REFRESH = 7;
+
+const MILISSEGUNDOS_POR_UNIDADE: Record<'d' | 'h' | 'm', number> = {
+  d: 24 * 60 * 60 * 1000,
+  h: 60 * 60 * 1000,
+  m: 60 * 1000,
+};
+
+const PADRAO_DURACAO = /^(\d+)(d|h|m)$/;
 
 @Injectable()
 export class TokensService {
+  // Calculado uma vez na subida do servico: config invalida falha cedo,
+  // no boot, em vez de estourar de forma confusa no primeiro login. Segue
+  // o mesmo padrao de SupabaseService, que valida suas variaveis no
+  // construtor.
+  private readonly refreshExpiraEmMs: number;
+
   constructor(
     private readonly jwt: JwtService,
     private readonly supabase: SupabaseService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    const configurado =
+      this.config.get<string>('JWT_REFRESH_EXPIRES') ??
+      `${DIAS_PADRAO_REFRESH}d`;
+    this.refreshExpiraEmMs = TokensService.interpretarDuracao(
+      configurado,
+      'JWT_REFRESH_EXPIRES',
+    );
+  }
+
+  // Interpreta valores no formato <numero><unidade>, com unidade d
+  // (dias), h (horas) ou m (minutos). Formato nao reconhecido lanca erro
+  // em vez de cair num padrao silencioso: configuracao errada deve
+  // aparecer na hora, nao virar comportamento estranho meses depois.
+  private static interpretarDuracao(
+    valor: string,
+    nomeVariavel: string,
+  ): number {
+    const match = PADRAO_DURACAO.exec(valor.trim());
+
+    if (!match) {
+      throw new Error(
+        `${nomeVariavel} invalida: "${valor}". Formatos aceitos: ` +
+          '<numero>d (dias), <numero>h (horas) ou <numero>m (minutos), ' +
+          'ex.: "7d", "12h", "30m".',
+      );
+    }
+
+    const quantidade = Number.parseInt(match[1], 10);
+    const unidade = match[2] as 'd' | 'h' | 'm';
+
+    return quantidade * MILISSEGUNDOS_POR_UNIDADE[unidade];
+  }
 
   async emitirPar(usuarioId: string): Promise<ParDeTokens> {
     const accessToken = await this.jwt.signAsync(
@@ -34,7 +88,7 @@ export class TokensService {
       {
         secret: this.config.get<string>('JWT_SECRET'),
         expiresIn: (this.config.get<string>('JWT_ACCESS_EXPIRES') ??
-          '15m') as StringValue,
+          '15m') as ExpiresIn,
       },
     );
 
@@ -116,12 +170,6 @@ export class TokensService {
   }
 
   private calcularExpiracaoRefresh(): Date {
-    const configurado =
-      this.config.get<string>('JWT_REFRESH_EXPIRES') ??
-      `${DIAS_PADRAO_REFRESH}d`;
-    const dias = Number.parseInt(configurado.replace('d', ''), 10);
-    const diasValidos = Number.isNaN(dias) ? DIAS_PADRAO_REFRESH : dias;
-
-    return new Date(Date.now() + diasValidos * 24 * 60 * 60 * 1000);
+    return new Date(Date.now() + this.refreshExpiraEmMs);
   }
 }

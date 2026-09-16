@@ -155,4 +155,53 @@ describe('TokensService', () => {
       expect(resultado.refreshToken).not.toBe('token');
     });
   });
+
+  describe('revogar', () => {
+    function montar(resposta: Resposta) {
+      const { service: supabase, espioes } = criarSupabaseFalso(resposta);
+      const service = new TokensService(
+        new JwtService({ secret: 'segredo-de-teste' }),
+        supabase,
+        criarConfigFalso(),
+      );
+      return { service, espioes };
+    }
+
+    it('filtra por revogado_em nulo, para nao sobrescrever a primeira revogacao', async () => {
+      const { service, espioes } = montar({ data: null, error: null });
+
+      await service.revogar('token');
+
+      expect(espioes.update).toHaveBeenCalledWith(
+        expect.objectContaining({ revogado_em: expect.any(String) }),
+      );
+      // A cadeia real e update().eq().is(): cada elo encadeado devolve um
+      // novo objeto, entao percorremos os mock.results para achar o elo
+      // que de fato recebeu a chamada a is('revogado_em', null).
+      const eloAposUpdate = espioes.update.mock.results[0].value as {
+        eq: ReturnType<typeof vi.fn>;
+      };
+      const eloAposEq = eloAposUpdate.eq.mock.results[0].value as {
+        is: ReturnType<typeof vi.fn>;
+      };
+      expect(eloAposEq.is).toHaveBeenCalledWith('revogado_em', null);
+    });
+
+    it('nao lanca quando nenhuma linha e encontrada (logout idempotente)', async () => {
+      const { service } = montar({ data: null, error: null });
+
+      await expect(service.revogar('token-inexistente')).resolves.toBeUndefined();
+    });
+
+    it('lanca quando o PostgREST devolve erro', async () => {
+      const { service } = montar({
+        data: null,
+        error: { message: 'falha de conexao' },
+      });
+
+      await expect(service.revogar('token')).rejects.toThrow(
+        'Falha ao encerrar sessao: falha de conexao',
+      );
+    });
+  });
 });
