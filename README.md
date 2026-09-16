@@ -495,15 +495,36 @@ reative `fileParallelism`.
 
 ## Mapa de requisitos
 
+### Funcionais
+
 | ID | Requisito | Situação |
 |---|---|---|
 | RF01 | Criar conta e fazer login | Atendido (e-mail/senha; Google pendente de credencial) |
 | RF02 | Editar dados cadastrais e preferências | Atendido na API; falta a tela |
-| RF15–RF17 | Funções de administrador | Fora desta entrega |
-| RNF02 | Trocar provedor de IA sem reescrever | Não aplicável ainda |
-| RNF06 | Dados armazenados e transmitidos com segurança | Atendido |
+| RF03 | Histórico de roteiros | Próxima entrega |
+| RF04–RF07 | Criar planejamento de viagem | Próxima entrega |
+| RF08–RF11 | Gerar roteiro via IA | Próxima entrega |
+| RF12 | Editar roteiro por chat | Próxima entrega |
+| RF13–RF14 | Estimativa de orçamento | Próxima entrega |
+| RF15–RF17 | Funções de administrador | Próxima entrega; RBAC já pronto |
+
+### Não funcionais
+
+| ID | Requisito | Situação |
+|---|---|---|
+| RNF01 | Roteiro em até 1 min, com indicador de carregamento | Não aplicável ainda |
+| RNF02 | Trocar provedor de IA sem reescrever a plataforma | Não aplicável ainda |
+| RNF03 | Tratar falha da API de IA com mensagem clara | Não aplicável ainda |
+| RNF04 | Acessível via navegador, layout responsivo | Atendido nas telas existentes |
+| RNF05 | Interface usável sem treinamento prévio | Parcial; avaliável quando o fluxo de roteiro existir |
+| RNF06 | Dados e senhas protegidos (hash, HTTPS) | Atendido |
+| RNF07 | Controlar volume de chamadas à API de IA | Não aplicável ainda |
 | RNF08 | Código modular para trabalho em paralelo | Atendido |
-| RNF10 | Controle de acesso por papéis | Infraestrutura pronta e testada |
+| RNF09 | Múltiplos planejamentos por usuário sem perda de desempenho | Não aplicável ainda |
+| RNF10 | Controle de acesso por papéis (RBAC) | Infraestrutura pronta e testada |
+
+Sete dos dez RNFs dependem do motor de roteiro, que é a próxima entrega. Os três
+que já valem — segurança, modularidade e responsividade — estão atendidos.
 
 ---
 
