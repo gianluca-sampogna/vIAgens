@@ -49,8 +49,31 @@ export async function limparUsuariosDeTeste(
  * chamadas de setup que cada teste faz a /auth/registrar (ou /auth/login)
  * se acumulam na mesma janela de 60s do limite de 10 req/min e derrubam
  * testes sem relacao nenhuma com o teste de limite, com um 429 inesperado.
+ *
+ * Alem do mapa "storage", o ThrottlerStorageService tambem guarda um
+ * mapa "timeoutIds" (throttlerName -> lista de NodeJS.Timeout) com um
+ * setTimeout agendado para cada hit registrado. O callback desse timer
+ * roda "const { totalHits } = this.storage.get(key)" quando o ttl (60s)
+ * expira. Se limparmos so o storage, um timer antigo ainda dispara mais
+ * tarde contra uma chave que ja foi apagada por um beforeEach seguinte,
+ * "this.storage.get(key)" volta undefined, e desestruturar totalHits
+ * disso lança excecao nao tratada dentro do callback. Isso so acontece
+ * se a suite levar mais de 60s de ponta a ponta (plausivel com hash
+ * argon2 e varios beforeEach chamando /auth/registrar, e mais ainda em
+ * maquina lenta ou CI carregado), entao cancelamos os timers pendentes
+ * tambem.
+ *
+ * "timeoutIds" e um campo interno do ThrottlerStorageService, nao faz
+ * parte da API publica do pacote @nestjs/throttler, e pode quebrar numa
+ * atualizacao futura. Esse risco e aceito conscientemente aqui porque o
+ * pacote nao oferece nenhuma forma publica de resetar o storage em teste.
  */
 export function limparThrottler(app: INestApplication): void {
-  const storage = app.get(ThrottlerStorage) as { storage: Map<string, unknown> };
+  const storage = app.get(ThrottlerStorage) as {
+    storage: Map<string, unknown>;
+    timeoutIds: Map<string, NodeJS.Timeout[]>;
+  };
+  storage.timeoutIds.forEach((timeouts) => timeouts.forEach(clearTimeout));
+  storage.timeoutIds.clear();
   storage.storage.clear();
 }

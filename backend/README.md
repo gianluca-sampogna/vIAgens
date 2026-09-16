@@ -46,9 +46,16 @@ Veja `.env.example`. Três armadilhas comuns:
 
 Erros seguem sempre `{ statusCode, mensagem, timestamp }`.
 
-Rotas `/auth/*` têm limite de 10 requisições por minuto por IP. O limite vale só ali:
+Rotas `/auth/*` têm limite de 10 requisições por minuto por IP, **por rota**: o
+`generateKey` do `ThrottlerGuard` inclui o nome da classe e do handler, então cada
+rota tem seu próprio contador independente (ex: errar a senha em `/auth/login`
+não consome o orçamento de `/auth/refresh`). O limite vale só nessas rotas:
 aplicá-lo globalmente atrapalharia o uso normal da API quando as rotas de roteiro
 existirem.
+
+Por ser um limite por IP, ele penaliza usuários atrás de NAT ou rede
+compartilhada (faculdade, empresa), onde várias pessoas dividem o mesmo
+endereço e passam a disputar o mesmo orçamento de 10 req/min.
 
 ## Integração com o frontend
 
