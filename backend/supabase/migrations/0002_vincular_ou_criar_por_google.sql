@@ -10,6 +10,24 @@
 --   3. nenhum dos dois           -> cria usuario novo, sem senha
 --
 -- Quem chama ja validou o id_token do Google, inclusive email_verified.
+--
+-- ATENCAO, quem for mexer em RLS depois: esta funcao e security invoker e
+-- o corpo roda com o papel de quem chamou a RPC. Hoje quem protege esta
+-- funcao e a AUSENCIA de qualquer policy de RLS nas tabelas que ela toca
+-- (usuario, conta_social, preferencias_gerais): toda tabela aqui tem RLS
+-- habilitado sem policy, entao nega tudo por padrao para qualquer papel
+-- que nao seja service_role - inclusive para o papel anon, que e quem
+-- efetivamente executa esta funcao quando chamada com a chave anonima
+-- (functions novas recebem EXECUTE para public por padrao no Postgres).
+-- No dia em que alguem adicionar uma policy de RLS para authenticated (ou
+-- para anon) nestas tabelas, esta RPC passa a funcionar publicamente sem
+-- passar pela verificacao do id_token do Google - ou seja, qualquer
+-- chamador vira "vincular_ou_criar_por_google" com um e-mail arbitrario e
+-- sequestra a conta correspondente. Se isso acontecer, revogue o EXECUTE
+-- desta funcao dos papeis anon/authenticated (ex.:
+-- "revoke execute on function vincular_ou_criar_por_google from anon,
+-- authenticated;") e mantenha o acesso restrito ao caminho atual: o
+-- NestJS chama via service_role, depois de validar o id_token.
 
 create or replace function vincular_ou_criar_por_google(
   p_provedor_conta_id text,

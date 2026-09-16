@@ -6,6 +6,11 @@ import {
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../banco/supabase.service';
 import { Usuario, paraUsuario } from './usuario';
+import {
+  PREFERENCIAS_PADRAO,
+  Preferencias,
+  paraPreferencias,
+} from './preferencias';
 
 export type DadosCriacaoUsuario = {
   nome: string;
@@ -92,6 +97,22 @@ export class UsuariosRepository {
     this.lancarSeErro(erroPreferencias, 'criar preferencias do usuario');
 
     return paraUsuario(data);
+  }
+
+  /**
+   * Le as preferencias gerais do usuario. Devolve PREFERENCIAS_PADRAO (nao
+   * lanca) quando a linha ainda nao existe - ver comentario em criar().
+   */
+  async buscarPreferencias(usuarioId: string): Promise<Preferencias> {
+    const { data, error } = await this.supabase.cliente
+      .from('preferencias_gerais')
+      .select('*')
+      .eq('usuario_id', usuarioId)
+      .maybeSingle();
+
+    this.lancarSeErro(error, 'buscar preferencias do usuario');
+
+    return data ? paraPreferencias(data) : PREFERENCIAS_PADRAO;
   }
 
   async atualizarPerfil(

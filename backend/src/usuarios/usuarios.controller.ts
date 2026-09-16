@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UsuarioAtual } from '../common/decorators/usuario-atual.decorator';
 import { UsuarioAutenticado } from '../auth/jwt.strategy';
 import { UsuariosService } from './usuarios.service';
-import { UsuarioPublico } from './usuario-publico';
+import { PerfilCompleto } from './usuario-publico';
 import { AtualizarPerfilDto } from './dto/atualizar-perfil.dto';
 
 @Controller('usuarios')
@@ -14,7 +14,7 @@ export class UsuariosController {
   @Get('eu')
   buscarPerfil(
     @UsuarioAtual() usuario: UsuarioAutenticado,
-  ): Promise<UsuarioPublico> {
+  ): Promise<PerfilCompleto> {
     return this.usuarios.buscarPerfil(usuario.id);
   }
 
@@ -22,7 +22,7 @@ export class UsuariosController {
   atualizarPerfil(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Body() dto: AtualizarPerfilDto,
-  ): Promise<UsuarioPublico> {
+  ): Promise<PerfilCompleto> {
     return this.usuarios.atualizarPerfil(usuario.id, dto);
   }
 }

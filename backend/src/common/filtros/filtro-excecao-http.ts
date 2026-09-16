@@ -45,6 +45,16 @@ export class FiltroExcecaoHttp implements ExceptionFilter {
   }
 
   private extrairMensagem(excecao: unknown, status: number): string {
+    // Para 5xx a resposta ao cliente e sempre generica, mesmo quando a
+    // excecao e uma HttpException com mensagem detalhada (ex.:
+    // InternalServerErrorException('Falha ao criar usuario: ...') no
+    // repositorio). O detalhe so vai para o log do servidor, acima: expor
+    // mensagem de erro do Postgres (nome de tabela, de constraint) no
+    // corpo da resposta contraria o RNF06.
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      return 'Erro interno do servidor';
+    }
+
     if (excecao instanceof HttpException) {
       const conteudo = excecao.getResponse();
 
@@ -61,10 +71,6 @@ export class FiltroExcecaoHttp implements ExceptionFilter {
           return message;
         }
       }
-    }
-
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      return 'Erro interno do servidor';
     }
 
     return 'Erro ao processar a requisicao';

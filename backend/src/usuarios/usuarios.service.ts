@@ -3,27 +3,31 @@ import {
   DadosAtualizacaoPerfil,
   UsuariosRepository,
 } from './usuarios.repository';
-import { UsuarioPublico, paraUsuarioPublico } from './usuario-publico';
+import { PerfilCompleto, paraPerfilCompleto } from './usuario-publico';
 
 @Injectable()
 export class UsuariosService {
   constructor(private readonly repositorio: UsuariosRepository) {}
 
-  async buscarPerfil(id: string): Promise<UsuarioPublico> {
+  async buscarPerfil(id: string): Promise<PerfilCompleto> {
     const usuario = await this.repositorio.buscarPorId(id);
 
     if (!usuario) {
       throw new NotFoundException('Usuario nao encontrado');
     }
 
-    return paraUsuarioPublico(usuario);
+    const preferencias = await this.repositorio.buscarPreferencias(id);
+
+    return paraPerfilCompleto(usuario, preferencias);
   }
 
   async atualizarPerfil(
     id: string,
     dados: DadosAtualizacaoPerfil,
-  ): Promise<UsuarioPublico> {
+  ): Promise<PerfilCompleto> {
     const usuario = await this.repositorio.atualizarPerfil(id, dados);
-    return paraUsuarioPublico(usuario);
+    const preferencias = await this.repositorio.buscarPreferencias(id);
+
+    return paraPerfilCompleto(usuario, preferencias);
   }
 }
