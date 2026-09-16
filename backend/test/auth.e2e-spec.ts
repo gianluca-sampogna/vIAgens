@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { criarAppDeTeste, limparUsuariosDeTeste } from './utilitarios-teste';
+import { SupabaseService } from '../src/banco/supabase.service';
+import { UsuariosRepository } from '../src/usuarios/usuarios.repository';
 
 describe('Autenticacao (e2e)', () => {
   let app: INestApplication;
@@ -123,6 +125,95 @@ describe('Autenticacao (e2e)', () => {
 
       expect(senhaErrada.body.mensagem).toBe('E-mail ou senha invalidos');
       expect(emailInexistente.body.mensagem).toBe(senhaErrada.body.mensagem);
+    });
+  });
+
+  describe('POST /auth/social-login', () => {
+    it('recusa id_token invalido com 401', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/social-login')
+        .send({ idToken: 'token-completamente-invalido' })
+        .expect(401);
+    });
+
+    it('recusa corpo sem idToken com 400', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/social-login')
+        .send({})
+        .expect(400);
+    });
+  });
+
+  describe('Vinculacao de conta', () => {
+    it('vincula o Google a uma conta que ja existia por e-mail e senha', async () => {
+      const supabase = app.get(SupabaseService);
+      const repositorio = app.get(UsuariosRepository);
+
+      await request(app.getHttpServer())
+        .post('/auth/registrar')
+        .send({
+          nome: 'Rafael',
+          email: 'vinculo@auth.teste.viagens',
+          senha: 'senha-bem-segura',
+        })
+        .expect(201);
+
+      const usuario = await repositorio.vincularOuCriarPorGoogle({
+        provedorContaId: 'google-vinculo-1',
+        email: 'vinculo@auth.teste.viagens',
+        nome: 'Rafael do Google',
+        avatarUrl: 'https://exemplo.com/foto.png',
+      });
+
+      // Mesma conta, nao uma segunda
+      const { data: contas } = await supabase.cliente
+        .from('usuario')
+        .select('id')
+        .eq('email', 'vinculo@auth.teste.viagens');
+      expect(contas).toHaveLength(1);
+      expect(usuario.id).toBe(contas![0].id);
+
+      // A senha original continua valendo
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'vinculo@auth.teste.viagens', senha: 'senha-bem-segura' })
+        .expect(200);
+
+      const { data: sociais } = await supabase.cliente
+        .from('conta_social')
+        .select('provedor_conta_id')
+        .eq('usuario_id', usuario.id);
+      expect(sociais).toHaveLength(1);
+      expect(sociais![0].provedor_conta_id).toBe('google-vinculo-1');
+    });
+
+    it('cria conta nova quando o e-mail ainda nao existe', async () => {
+      const repositorio = app.get(UsuariosRepository);
+
+      const usuario = await repositorio.vincularOuCriarPorGoogle({
+        provedorContaId: 'google-novo-1',
+        email: 'novo@auth.teste.viagens',
+        nome: 'Usuario Novo',
+        avatarUrl: null,
+      });
+
+      expect(usuario.senhaHash).toBeNull();
+      expect(usuario.email).toBe('novo@auth.teste.viagens');
+    });
+
+    it('reconhece o mesmo provedorContaId como login, sem duplicar', async () => {
+      const repositorio = app.get(UsuariosRepository);
+      const perfil = {
+        provedorContaId: 'google-repetido-1',
+        email: 'repetido-social@auth.teste.viagens',
+        nome: 'Usuario',
+        avatarUrl: null,
+      };
+
+      const primeiro = await repositorio.vincularOuCriarPorGoogle(perfil);
+      const segundo = await repositorio.vincularOuCriarPorGoogle(perfil);
+
+      expect(segundo.id).toBe(primeiro.id);
     });
   });
 });

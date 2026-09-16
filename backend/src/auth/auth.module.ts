@@ -7,11 +7,18 @@ import { AuthService } from './auth.service';
 import { HashService } from './hash.service';
 import { TokensService } from './tokens.service';
 import { JwtStrategy } from './jwt.strategy';
+import { VerificadorGoogle } from './verificador-google';
 
 @Module({
   imports: [UsuariosModule, JwtModule.register({}), PassportModule],
   controllers: [AuthController],
-  providers: [AuthService, HashService, TokensService, JwtStrategy],
+  providers: [
+    AuthService,
+    HashService,
+    TokensService,
+    JwtStrategy,
+    VerificadorGoogle,
+  ],
   exports: [AuthService, TokensService],
 })
 export class AuthModule {}

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../banco/supabase.service';
+import { LinhaUsuario } from '../banco/tipos-banco';
 import { Usuario, paraUsuario } from './usuario';
 
 export type DadosCriacaoUsuario = {
@@ -24,6 +25,13 @@ export type DadosPreferencias = {
 export type DadosAtualizacaoPerfil = {
   nome?: string;
   preferencias?: DadosPreferencias;
+};
+
+export type PerfilSocial = {
+  provedorContaId: string;
+  email: string;
+  nome: string;
+  avatarUrl: string | null;
 };
 
 @Injectable()
@@ -141,6 +149,48 @@ export class UsuariosRepository {
 
     if (!data) {
       throw new NotFoundException('Usuario nao encontrado');
+    }
+
+    return paraUsuario(data);
+  }
+
+  async buscarPorContaSocial(provedorContaId: string): Promise<Usuario | null> {
+    const { data, error } = await this.supabase.cliente
+      .from('conta_social')
+      .select('usuario:usuario_id (*)')
+      .eq('provedor', 'GOOGLE')
+      .eq('provedor_conta_id', provedorContaId)
+      .maybeSingle();
+
+    this.lancarSeErro(error, 'buscar conta social');
+
+    const linha = (data as { usuario: LinhaUsuario } | null)?.usuario;
+    return linha ? paraUsuario(linha) : null;
+  }
+
+  /**
+   * Delega ao banco. A funcao vincular_ou_criar_por_google resolve os tres
+   * casos (conta social conhecida, e-mail ja cadastrado, usuario novo) numa
+   * transacao. Fazer isso aqui em TypeScript seria tres chamadas sem
+   * atomicidade, e duas abas em corrida criariam conta duplicada.
+   */
+  async vincularOuCriarPorGoogle(perfil: PerfilSocial): Promise<Usuario> {
+    const { data, error } = await this.supabase.cliente.rpc(
+      'vincular_ou_criar_por_google',
+      {
+        p_provedor_conta_id: perfil.provedorContaId,
+        p_email: perfil.email,
+        p_nome: perfil.nome,
+        p_avatar_url: perfil.avatarUrl,
+      },
+    );
+
+    this.lancarSeErro(error, 'vincular ou criar usuario pelo Google');
+
+    if (!data) {
+      throw new InternalServerErrorException(
+        'Funcao de vinculacao nao devolveu usuario',
+      );
     }
 
     return paraUsuario(data);

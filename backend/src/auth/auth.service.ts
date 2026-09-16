@@ -6,6 +6,7 @@ import {
 } from '../usuarios/usuario-publico';
 import { HashService } from './hash.service';
 import { TokensService } from './tokens.service';
+import { VerificadorGoogle } from './verificador-google';
 import { RegistrarDto } from './dto/registrar.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly usuarios: UsuariosRepository,
     private readonly hash: HashService,
     private readonly tokens: TokensService,
+    private readonly google: VerificadorGoogle,
   ) {}
 
   async registrar(dto: RegistrarDto): Promise<RespostaAutenticacao> {
@@ -61,6 +63,14 @@ export class AuthService {
       throw new UnauthorizedException('E-mail ou senha invalidos');
     }
 
+    const par = await this.tokens.emitirPar(usuario.id);
+
+    return { usuario: paraUsuarioPublico(usuario), ...par };
+  }
+
+  async loginSocial(idToken: string): Promise<RespostaAutenticacao> {
+    const perfil = await this.google.verificar(idToken);
+    const usuario = await this.usuarios.vincularOuCriarPorGoogle(perfil);
     const par = await this.tokens.emitirPar(usuario.id);
 
     return { usuario: paraUsuarioPublico(usuario), ...par };
