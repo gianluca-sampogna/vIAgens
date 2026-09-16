@@ -11,13 +11,13 @@ describe('Usuarios (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await limparUsuariosDeTeste(app);
+    await limparUsuariosDeTeste(app, 'usuarios');
 
     const resposta = await request(app.getHttpServer())
       .post('/auth/registrar')
       .send({
         nome: 'Rafael',
-        email: 'perfil@teste.viagens',
+        email: 'perfil@usuarios.teste.viagens',
         senha: 'senha-bem-segura',
       })
       .expect(201);
@@ -26,7 +26,7 @@ describe('Usuarios (e2e)', () => {
   });
 
   afterAll(async () => {
-    await limparUsuariosDeTeste(app);
+    await limparUsuariosDeTeste(app, 'usuarios');
     await app.close();
   });
 
@@ -39,7 +39,7 @@ describe('Usuarios (e2e)', () => {
 
       expect(resposta.body).toMatchObject({
         nome: 'Rafael',
-        email: 'perfil@teste.viagens',
+        email: 'perfil@usuarios.teste.viagens',
         papel: 'USUARIO',
       });
       expect(resposta.body).not.toHaveProperty('senhaHash');

@@ -10,11 +10,11 @@ describe('Autenticacao (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await limparUsuariosDeTeste(app);
+    await limparUsuariosDeTeste(app, 'auth');
   });
 
   afterAll(async () => {
-    await limparUsuariosDeTeste(app);
+    await limparUsuariosDeTeste(app, 'auth');
     await app.close();
   });
 
@@ -24,14 +24,14 @@ describe('Autenticacao (e2e)', () => {
         .post('/auth/registrar')
         .send({
           nome: 'Rafael',
-          email: 'rafael@teste.viagens',
+          email: 'rafael@auth.teste.viagens',
           senha: 'senha-bem-segura',
         })
         .expect(201);
 
       expect(resposta.body.usuario).toMatchObject({
         nome: 'Rafael',
-        email: 'rafael@teste.viagens',
+        email: 'rafael@auth.teste.viagens',
         papel: 'USUARIO',
       });
       expect(resposta.body.usuario).not.toHaveProperty('senhaHash');
@@ -45,7 +45,7 @@ describe('Autenticacao (e2e)', () => {
     it('recusa e-mail ja cadastrado com 409', async () => {
       const corpo = {
         nome: 'Rafael',
-        email: 'repetido@teste.viagens',
+        email: 'repetido@auth.teste.viagens',
         senha: 'senha-bem-segura',
       };
 
@@ -67,7 +67,7 @@ describe('Autenticacao (e2e)', () => {
         .post('/auth/registrar')
         .send({
           nome: 'Rafael',
-          email: 'curta@teste.viagens',
+          email: 'curta@auth.teste.viagens',
           senha: 'curta',
         })
         .expect(400);
@@ -78,7 +78,7 @@ describe('Autenticacao (e2e)', () => {
         .post('/auth/registrar')
         .send({
           nome: 'Invasor',
-          email: 'invasor@teste.viagens',
+          email: 'invasor@auth.teste.viagens',
           senha: 'senha-bem-segura',
           papel: 'ADMINISTRADOR',
         })
@@ -89,7 +89,7 @@ describe('Autenticacao (e2e)', () => {
   describe('POST /auth/login', () => {
     const conta = {
       nome: 'Rafael',
-      email: 'login@teste.viagens',
+      email: 'login@auth.teste.viagens',
       senha: 'senha-bem-segura',
     };
 
@@ -118,7 +118,7 @@ describe('Autenticacao (e2e)', () => {
 
       const emailInexistente = await request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: 'ninguem@teste.viagens', senha: 'senha-bem-segura' })
+        .send({ email: 'ninguem@auth.teste.viagens', senha: 'senha-bem-segura' })
         .expect(401);
 
       expect(senhaErrada.body.mensagem).toBe('E-mail ou senha invalidos');
