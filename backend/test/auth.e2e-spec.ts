@@ -88,6 +88,69 @@ describe('Autenticacao (e2e)', () => {
     });
   });
 
+  describe('POST /auth/refresh e /auth/logout', () => {
+    let refreshToken: string;
+
+    beforeEach(async () => {
+      const resposta = await request(app.getHttpServer())
+        .post('/auth/registrar')
+        .send({
+          nome: 'Rafael',
+          email: 'sessao@auth.teste.viagens',
+          senha: 'senha-bem-segura',
+        })
+        .expect(201);
+
+      refreshToken = resposta.body.refreshToken;
+    });
+
+    it('troca o refresh token por um par novo', async () => {
+      const resposta = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken })
+        .expect(200);
+
+      expect(resposta.body.accessToken).toEqual(expect.any(String));
+      expect(resposta.body.refreshToken).not.toBe(refreshToken);
+    });
+
+    it('invalida o refresh token antigo apos a rotacao', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken })
+        .expect(401);
+    });
+
+    it('logout revoga o token e impede refresh posterior', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken })
+        .expect(401);
+    });
+
+    it('logout e idempotente', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken })
+        .expect(204);
+    });
+  });
+
   describe('POST /auth/login', () => {
     const conta = {
       nome: 'Rafael',
