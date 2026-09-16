@@ -1,9 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UsuarioAtual } from '../common/decorators/usuario-atual.decorator';
 import { UsuarioAutenticado } from '../auth/jwt.strategy';
 import { UsuariosService } from './usuarios.service';
 import { UsuarioPublico } from './usuario-publico';
+import { AtualizarPerfilDto } from './dto/atualizar-perfil.dto';
 
 @Controller('usuarios')
 @UseGuards(JwtAuthGuard)
@@ -15,5 +16,13 @@ export class UsuariosController {
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ): Promise<UsuarioPublico> {
     return this.usuarios.buscarPerfil(usuario.id);
+  }
+
+  @Patch('eu')
+  atualizarPerfil(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Body() dto: AtualizarPerfilDto,
+  ): Promise<UsuarioPublico> {
+    return this.usuarios.atualizarPerfil(usuario.id, dto);
   }
 }
