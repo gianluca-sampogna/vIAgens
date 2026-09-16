@@ -77,8 +77,7 @@ vIAgens/
 ├── backend/           NestJS 12, TypeScript, supabase-js, Vitest
 │   └── supabase/
 │       └── migrations/    SQL versionado, aplicado ao projeto Supabase
-├── docs/              diagramas UML, spec de design e plano de implementação
-└── .claude/           configuração para rodar os dois servidores
+└── docs/              diagramas UML e o documento de requisitos
 ```
 
 ---
@@ -500,4 +499,5 @@ reative `fileParallelism`.
 
 - `backend/README.md` — rotas, variáveis de ambiente, armadilhas de configuração
   e o guia de integração para quem mexe no frontend
-- `docs/` — diagramas UML (casos de uso, atividade, sequência, classes)
+- `docs/` — diagramas UML (casos de uso, atividade, sequência, classes), com a
+  fonte `.puml` do diagrama de classes, mais o documento de requisitos e escopo

@@ -1,0 +1,151 @@
+@startuml diagrama-classes-guia-viagens
+
+title Guia de vIAgens — Diagrama de Classes (v1)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam classAttributeFontSize 12
+skinparam classFontName Helvetica
+skinparam defaultFontName Helvetica
+skinparam roundcorner 6
+skinparam classBorderColor #26282B
+skinparam classBackgroundColor #FAFAF8
+skinparam packageBorderColor #26282B
+skinparam arrowColor #26282B
+skinparam noteBackgroundColor #E8DCC4
+skinparam noteBorderColor #B8873B
+skinparam titleFontSize 16
+
+' ==================== Contas e papéis ====================
+class Usuario {
+  -id: UUID
+  -nome: String
+  -email: String
+  -senhaHash: String
+  +criarConta()
+  +autenticar(): boolean
+  +editarPreferencias(pref: PreferenciasGerais)
+  +consultarHistorico(): List<PlanejamentoViagem>
+}
+
+class Administrador extends Usuario {
+  +moderarRoteiro(p: PlanejamentoViagem)
+  +banirUsuario(u: Usuario)
+  +consultarMetricas(): MetricasUso
+}
+note right of Administrador
+  RF15, RF16, RF17
+  Acesso restrito por RBAC (RNF10)
+end note
+
+class PreferenciasGerais {
+  -orcamentoReferencia: BigDecimal
+  -interessesPadrao: List<String>
+  -estiloViagemPadrao: String
+  -climaPreferido: String
+}
+
+' ==================== Planejamento de viagem ====================
+class PlanejamentoViagem {
+  -id: UUID
+  -dataInicio: LocalDate
+  -dataFim: LocalDate
+  -preferenciaViagem: String
+  -orcamentoEstimado: BigDecimal
+  +gerarRoteiro()
+  +editarViaChat(instrucao: String)
+  +calcularOrcamentoEstimado(): BigDecimal
+}
+
+class EscopoGeografico {
+  -pontoCentral: Coordenada
+  -raioKm: Double
+}
+note right of EscopoGeografico
+  Opção B da equipe (raio de
+  deslocamento) — ver Regras de
+  Negócio. RF06.
+end note
+
+class Coordenada {
+  -latitude: Double
+  -longitude: Double
+}
+
+class Dia {
+  -data: LocalDate
+  +adicionarItem(item: ItemRoteiro)
+}
+
+class Alocacao {
+  -regiaoSugerida: String
+}
+note right of Alocacao
+  Cenário B: sugere região,
+  não fecha reserva.
+end note
+
+class ItemRoteiro {
+  -horario: LocalTime
+}
+
+enum TipoDestino {
+  PRINCIPAL
+  APOIO
+}
+
+class Destino {
+  -nome: String
+  -coordenadas: Coordenada
+  -tipo: TipoDestino
+}
+
+' ==================== Motor de IA ====================
+class ControladorRoteiro {
+  +formatarPrompt(p: PlanejamentoViagem): String
+  +processarResposta(resposta: String): PlanejamentoViagem
+  +persistir(p: PlanejamentoViagem)
+}
+
+interface ServicoIA {
+  +gerarRoteiro(prompt: String): String
+}
+note right of ServicoIA
+  Interface troca de provedor
+  sem reescrever a plataforma
+  — RNF02
+end note
+
+class ClaudeAdapter implements ServicoIA
+class OpenAIAdapter implements ServicoIA
+
+class MetricasUso {
+  -roteirosGerados: int
+  -usuariosAtivos: int
+  -chamadasApiIA: int
+}
+
+' ==================== Relacionamentos ====================
+Usuario "1" *-- "1" PreferenciasGerais : possui
+Usuario "1" o-- "*" PlanejamentoViagem : cria >
+
+PlanejamentoViagem "1" *-- "1" EscopoGeografico : define
+PlanejamentoViagem "1" *-- "*" Dia : contém
+PlanejamentoViagem "1" o-- "*" Destino : destinos principais >
+
+EscopoGeografico "1" *-- "1" Coordenada : ponto central
+Destino "1" *-- "1" Coordenada : coordenadas
+
+Dia "1" *-- "1" Alocacao : possui
+Dia "1" *-- "*" ItemRoteiro : roteiro
+ItemRoteiro "*" --> "1" Destino : referencia >
+
+ControladorRoteiro ..> PlanejamentoViagem : orquestra >
+ControladorRoteiro ..> ServicoIA : usa >
+ServicoIA <|.. ClaudeAdapter
+ServicoIA <|.. OpenAIAdapter
+
+Administrador ..> MetricasUso : consulta >
+
+@enduml
