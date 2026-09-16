@@ -218,18 +218,30 @@ qualquer chave que não seja a `service_role`. Vale registrar a consequência: a
 segurança efetiva está inteiramente no código do NestJS, sem segunda linha de
 defesa no banco.
 
-### Desvios conscientes do diagrama de classes
+### O que mudou da modelagem v1 para a v2
 
-Dois pontos em que o banco não espelha o `.puml`, aprovados pela equipe:
+A implementação revelou quatro pontos em que o desenho original não se
+sustentava. O diagrama de classes foi **atualizado para a v2**
+(`docs/diagrama-classes-guia-viagens.puml`) para refletir o sistema construído,
+com cada decisão anotada no próprio diagrama.
 
-1. **`Administrador` é uma coluna `papel`, não uma tabela.** No diagrama é
-   herança de `Usuario`, mas a classe não tem atributo próprio nenhum, só
-   métodos. Herança em banco relacional custaria um join em toda consulta para
-   distinguir algo que um enum resolve.
-2. **`senhaHash` é opcional, e o provedor social tem tabela própria.** O
-   diagrama marca `senhaHash` como obrigatório, o que quebraria para quem entra
-   só pelo Google. Tabela separada também permite adicionar Apple ou GitHub
-   como linha nova, não como coluna nova.
+1. **`Administrador` virou uma coluna `papel`, não uma subclasse.** A subclasse
+   não tinha atributo próprio nenhum, só comportamento. Herança em banco
+   relacional custaria um join em toda consulta para distinguir algo que um
+   enum resolve. O RBAC do RNF10 continua, aplicado por um guard.
+2. **`senhaHash` passou a ser opcional.** Obrigatório, quebraria para quem entra
+   apenas pelo Google e nunca define senha na plataforma.
+3. **`ContaSocial` e `RefreshToken` são novas.** Não existiam na modelagem
+   original, mas login social e sessão renovável exigem. Tabela própria para o
+   provedor permite adicionar Apple ou GitHub como linha, não como alteração de
+   esquema.
+4. **Os comportamentos saíram da entidade para a camada de serviço.** A v1
+   modelava `criarConta()`, `autenticar()` e `editarPreferencias()` como métodos
+   de `Usuario`. Viraram `ServicoAutenticacao` e `ServicoUsuario`, separando
+   dados de regra e permitindo testar a regra sem banco.
+
+No diagrama v2, classe **sólida** é o que está implementado e funcionando;
+**tracejada** é o que está modelado e fica para a próxima entrega.
 
 ### Transação sem ORM
 

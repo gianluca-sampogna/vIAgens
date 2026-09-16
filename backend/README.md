@@ -154,12 +154,22 @@ sem repensar o isolamento dos dados de teste.
 
 ## Decisões registradas
 
-Dois desvios conscientes do diagrama de classes, aprovados pela equipe:
+A modelagem foi atualizada para a **v2** a partir do que a implementação revelou. O
+diagrama de classes em `docs/diagrama-classes-guia-viagens.puml` já reflete o sistema
+construído, com cada decisão anotada. Em resumo:
 
-1. `Administrador` é uma coluna `papel`, não uma tabela. A classe não tem atributo próprio,
-   só métodos, e herança em banco relacional custaria um join em toda consulta.
-2. `senhaHash` é opcional, e o provedor social fica em tabela separada — quem entra pelo
-   Google não tem senha.
+1. `Administrador` é uma coluna `papel`, não uma subclasse. A classe não tinha atributo
+   próprio, só métodos, e herança em banco relacional custaria um join em toda consulta.
+2. `senhaHash` é opcional — quem entra pelo Google não tem senha na plataforma.
+3. `conta_social` e `refresh_token` são tabelas novas, que a modelagem original não previa
+   mas que login social e sessão renovável exigem.
+4. Os comportamentos que a v1 punha em `Usuario` vivem na camada de serviço.
+
+O `.puml` é a fonte; o `.png` ao lado é gerado dele. Para regerar depois de editar:
+
+```bash
+java -jar plantuml.jar -tpng docs/diagrama-classes-guia-viagens.puml
+```
 
 ### Acesso ao banco
 
