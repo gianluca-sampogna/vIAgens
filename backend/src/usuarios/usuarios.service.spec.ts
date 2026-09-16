@@ -21,7 +21,6 @@ function criarRepositorioFalso(): UsuariosRepository {
     buscarPorId: vi.fn(),
     criar: vi.fn(),
     atualizarPerfil: vi.fn(),
-    buscarPorContaSocial: vi.fn(),
     vincularOuCriarPorGoogle: vi.fn(),
   } as unknown as UsuariosRepository;
 }

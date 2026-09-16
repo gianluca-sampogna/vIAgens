@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../banco/supabase.service';
-import { LinhaUsuario } from '../banco/tipos-banco';
 import { Usuario, paraUsuario } from './usuario';
 
 export type DadosCriacaoUsuario = {
@@ -152,20 +151,6 @@ export class UsuariosRepository {
     }
 
     return paraUsuario(data);
-  }
-
-  async buscarPorContaSocial(provedorContaId: string): Promise<Usuario | null> {
-    const { data, error } = await this.supabase.cliente
-      .from('conta_social')
-      .select('usuario:usuario_id (*)')
-      .eq('provedor', 'GOOGLE')
-      .eq('provedor_conta_id', provedorContaId)
-      .maybeSingle();
-
-    this.lancarSeErro(error, 'buscar conta social');
-
-    const linha = (data as { usuario: LinhaUsuario } | null)?.usuario;
-    return linha ? paraUsuario(linha) : null;
   }
 
   /**

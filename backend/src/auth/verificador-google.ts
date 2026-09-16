@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -11,11 +11,26 @@ export type PerfilGoogle = {
 
 @Injectable()
 export class VerificadorGoogle {
+  private readonly logger = new Logger(VerificadorGoogle.name);
   private readonly cliente: OAuth2Client;
   private readonly clientId: string;
 
   constructor(config: ConfigService) {
     this.clientId = config.get<string>('GOOGLE_CLIENT_ID') ?? '';
+
+    // Escolha deliberada e temporaria: o client id ainda nao foi fornecido
+    // pelo integrante do frontend. Falhar na subida aqui travaria o backend
+    // inteiro por uma dependencia externa que nao depende deste servico.
+    // audience: '' rejeita todo token, entao o comportamento e seguro
+    // (fecha, nao abre) mas fica silencioso sem este aviso. Quando o client
+    // id estiver configurado, considere trocar isto por falha na subida.
+    if (!this.clientId) {
+      this.logger.warn(
+        'GOOGLE_CLIENT_ID nao configurado: login social com Google esta ' +
+          'inoperante. Defina a variavel de ambiente GOOGLE_CLIENT_ID.',
+      );
+    }
+
     this.cliente = new OAuth2Client(this.clientId);
   }
 
@@ -29,7 +44,12 @@ export class VerificadorGoogle {
         audience: this.clientId,
       });
       payload = ticket.getPayload();
-    } catch {
+    } catch (erro) {
+      // Nunca logar o idToken: e credencial, e log e lido por mais gente
+      // e costuma ir para sistemas externos. So o tipo/mensagem do erro.
+      this.logger.warn(
+        `Falha ao verificar token do Google: ${erro instanceof Error ? erro.message : String(erro)}`,
+      );
       throw new UnauthorizedException('Token do Google invalido');
     }
 
