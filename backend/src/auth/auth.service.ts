@@ -5,6 +5,7 @@ import {
   paraUsuarioPublico,
 } from '../usuarios/usuario-publico';
 import { HashService } from './hash.service';
+import { TokensService } from './tokens.service';
 import { RegistrarDto } from './dto/registrar.dto';
 
 export type RespostaAutenticacao = {
@@ -18,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly usuarios: UsuariosRepository,
     private readonly hash: HashService,
+    private readonly tokens: TokensService,
   ) {}
 
   async registrar(dto: RegistrarDto): Promise<RespostaAutenticacao> {
@@ -35,10 +37,11 @@ export class AuthService {
       senhaHash,
     });
 
+    const par = await this.tokens.emitirPar(usuario.id);
+
     return {
       usuario: paraUsuarioPublico(usuario),
-      accessToken: '',
-      refreshToken: '',
+      ...par,
     };
   }
 }

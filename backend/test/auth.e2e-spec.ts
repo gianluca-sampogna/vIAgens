@@ -36,6 +36,10 @@ describe('Autenticacao (e2e)', () => {
       });
       expect(resposta.body.usuario).not.toHaveProperty('senhaHash');
       expect(resposta.body.usuario.id).toEqual(expect.any(String));
+      expect(resposta.body.accessToken).toEqual(expect.any(String));
+      expect(resposta.body.accessToken.length).toBeGreaterThan(20);
+      expect(resposta.body.refreshToken).toEqual(expect.any(String));
+      expect(resposta.body.refreshToken).toHaveLength(96);
     });
 
     it('recusa e-mail ja cadastrado com 409', async () => {
