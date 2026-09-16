@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { criarAppDeTeste, limparUsuariosDeTeste } from './utilitarios-teste';
+import { SupabaseService } from '../src/banco/supabase.service';
 
 describe('Usuarios (e2e)', () => {
   let app: INestApplication;
@@ -73,6 +74,26 @@ describe('Usuarios (e2e)', () => {
         .expect(200);
 
       expect(resposta.body.nome).toBe('Rafael Bassul');
+
+      // UsuarioPublico nao devolve preferencias, entao o corpo da resposta
+      // nao prova que elas chegaram ao banco. Le a tabela direto para
+      // verificar a persistencia de verdade.
+      const supabase = app.get(SupabaseService);
+      const { data: preferencias, error } = await supabase.cliente
+        .from('preferencias_gerais')
+        .select('orcamento_referencia, interesses_padrao, clima_preferido')
+        .eq('usuario_id', resposta.body.id)
+        .maybeSingle();
+
+      expect(error).toBeNull();
+      expect(preferencias).not.toBeNull();
+
+      // numeric(12,2) pode voltar do PostgREST como string ("3500.50") ou
+      // como number, dependendo do driver/versao. Comparamos pelo valor
+      // numerico para nao depender desse detalhe de serializacao.
+      expect(Number(preferencias!.orcamento_referencia)).toBe(3500.5);
+      expect(preferencias!.interesses_padrao).toEqual(['praia', 'gastronomia']);
+      expect(preferencias!.clima_preferido).toBe('quente');
     });
 
     it('recusa tentativa de alterar o papel', async () => {
