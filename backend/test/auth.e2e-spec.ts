@@ -85,4 +85,44 @@ describe('Autenticacao (e2e)', () => {
         .expect(400);
     });
   });
+
+  describe('POST /auth/login', () => {
+    const conta = {
+      nome: 'Rafael',
+      email: 'login@teste.viagens',
+      senha: 'senha-bem-segura',
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/registrar')
+        .send(conta)
+        .expect(201);
+    });
+
+    it('autentica com a senha correta', async () => {
+      const resposta = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: conta.email, senha: conta.senha })
+        .expect(200);
+
+      expect(resposta.body.usuario.email).toBe(conta.email);
+      expect(resposta.body.accessToken).toEqual(expect.any(String));
+    });
+
+    it('devolve a MESMA mensagem para senha errada e para e-mail inexistente', async () => {
+      const senhaErrada = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: conta.email, senha: 'senha-errada-mesmo' })
+        .expect(401);
+
+      const emailInexistente = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'ninguem@teste.viagens', senha: 'senha-bem-segura' })
+        .expect(401);
+
+      expect(senhaErrada.body.mensagem).toBe('E-mail ou senha invalidos');
+      expect(emailInexistente.body.mensagem).toBe(senhaErrada.body.mensagem);
+    });
+  });
 });

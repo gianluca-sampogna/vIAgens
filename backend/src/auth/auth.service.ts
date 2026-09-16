@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsuariosRepository } from '../usuarios/usuarios.repository';
 import {
   UsuarioPublico,
@@ -7,6 +7,7 @@ import {
 import { HashService } from './hash.service';
 import { TokensService } from './tokens.service';
 import { RegistrarDto } from './dto/registrar.dto';
+import { LoginDto } from './dto/login.dto';
 
 export type RespostaAutenticacao = {
   usuario: UsuarioPublico;
@@ -43,5 +44,25 @@ export class AuthService {
       usuario: paraUsuarioPublico(usuario),
       ...par,
     };
+  }
+
+  async login(dto: LoginDto): Promise<RespostaAutenticacao> {
+    const email = dto.email.toLowerCase().trim();
+    const usuario = await this.usuarios.buscarPorEmail(email);
+
+    // Usuario inexistente, conta so com login social (sem senhaHash) e senha
+    // errada caem todos na mesma resposta, para nao revelar quais e-mails
+    // tem cadastro.
+    const senhaConfere =
+      usuario?.senhaHash != null &&
+      (await this.hash.verificar(usuario.senhaHash, dto.senha));
+
+    if (!usuario || !senhaConfere) {
+      throw new UnauthorizedException('E-mail ou senha invalidos');
+    }
+
+    const par = await this.tokens.emitirPar(usuario.id);
+
+    return { usuario: paraUsuarioPublico(usuario), ...par };
   }
 }
