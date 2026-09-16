@@ -15,12 +15,20 @@ const usuarioFalso: Usuario = {
   atualizadoEm: new Date('2026-01-01'),
 };
 
+const preferenciasPadraoFalsas = {
+  orcamentoReferencia: null,
+  interessesPadrao: [],
+  estiloViagemPadrao: null,
+  climaPreferido: null,
+};
+
 function criarRepositorioFalso(): UsuariosRepository {
   return {
     buscarPorEmail: vi.fn(),
     buscarPorId: vi.fn(),
     criar: vi.fn(),
     atualizarPerfil: vi.fn(),
+    buscarPreferencias: vi.fn().mockResolvedValue(preferenciasPadraoFalsas),
     vincularOuCriarPorGoogle: vi.fn(),
   } as unknown as UsuariosRepository;
 }
@@ -47,6 +55,7 @@ describe('UsuariosService', () => {
         avatarUrl: null,
         papel: 'USUARIO',
         criadoEm: new Date('2026-01-01'),
+        preferencias: preferenciasPadraoFalsas,
       });
       expect(perfil).not.toHaveProperty('senhaHash');
     });

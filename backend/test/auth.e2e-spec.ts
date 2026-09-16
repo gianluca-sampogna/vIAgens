@@ -80,6 +80,34 @@ describe('Autenticacao (e2e)', () => {
         .expect(400);
     });
 
+    it('normaliza o e-mail para minusculas: maiusculas e minusculas sao a mesma conta', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/registrar')
+        .send({
+          nome: 'Rafael',
+          email: 'Rafael@Auth.Teste.Viagens',
+          senha: 'senha-bem-segura',
+        })
+        .expect(201);
+
+      const resposta = await request(app.getHttpServer())
+        .post('/auth/registrar')
+        .send({
+          nome: 'Rafael',
+          email: 'rafael@auth.teste.viagens',
+          senha: 'outra-senha-valida',
+        })
+        .expect(409);
+
+      expect(resposta.body.mensagem).toBe('E-mail ja cadastrado');
+
+      // Login com a caixa trocada continua funcionando: e a mesma conta.
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'RAFAEL@AUTH.TESTE.VIAGENS', senha: 'senha-bem-segura' })
+        .expect(200);
+    });
+
     it('ignora campo nao declarado no DTO e recusa a requisicao', async () => {
       await request(app.getHttpServer())
         .post('/auth/registrar')

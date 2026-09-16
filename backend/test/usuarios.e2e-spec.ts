@@ -1,6 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { criarAppDeTeste, limparUsuariosDeTeste } from './utilitarios-teste';
+import {
+  criarAppDeTeste,
+  limparThrottler,
+  limparUsuariosDeTeste,
+} from './utilitarios-teste';
 import { SupabaseService } from '../src/banco/supabase.service';
 
 describe('Usuarios (e2e)', () => {
@@ -13,6 +17,7 @@ describe('Usuarios (e2e)', () => {
 
   beforeEach(async () => {
     await limparUsuariosDeTeste(app, 'usuarios');
+    limparThrottler(app);
 
     const resposta = await request(app.getHttpServer())
       .post('/auth/registrar')
@@ -44,6 +49,12 @@ describe('Usuarios (e2e)', () => {
         papel: 'USUARIO',
       });
       expect(resposta.body).not.toHaveProperty('senhaHash');
+      expect(resposta.body.preferencias).toEqual({
+        orcamentoReferencia: null,
+        interessesPadrao: [],
+        estiloViagemPadrao: null,
+        climaPreferido: null,
+      });
     });
 
     it('recusa requisicao sem token com 401', async () => {
@@ -94,6 +105,42 @@ describe('Usuarios (e2e)', () => {
       expect(Number(preferencias!.orcamento_referencia)).toBe(3500.5);
       expect(preferencias!.interesses_padrao).toEqual(['praia', 'gastronomia']);
       expect(preferencias!.clima_preferido).toBe('quente');
+
+      // PATCH devolve a mesma forma que GET, com preferencias ja em
+      // camelCase e o numeric convertido para number.
+      expect(resposta.body.preferencias).toEqual({
+        orcamentoReferencia: 3500.5,
+        interessesPadrao: ['praia', 'gastronomia'],
+        estiloViagemPadrao: null,
+        climaPreferido: 'quente',
+      });
+    });
+
+    it('grava preferencias via PATCH e le de volta via GET', async () => {
+      await request(app.getHttpServer())
+        .patch('/usuarios/eu')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          preferencias: {
+            orcamentoReferencia: 1200,
+            interessesPadrao: ['montanha'],
+            estiloViagemPadrao: 'mochilao',
+            climaPreferido: 'frio',
+          },
+        })
+        .expect(200);
+
+      const resposta = await request(app.getHttpServer())
+        .get('/usuarios/eu')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(resposta.body.preferencias).toEqual({
+        orcamentoReferencia: 1200,
+        interessesPadrao: ['montanha'],
+        estiloViagemPadrao: 'mochilao',
+        climaPreferido: 'frio',
+      });
     });
 
     it('recusa tentativa de alterar o papel', async () => {
