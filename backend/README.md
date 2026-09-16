@@ -59,163 +59,80 @@ endereço e passam a disputar o mesmo orçamento de 10 req/min.
 
 ## Integração com o frontend
 
-> Esta seção é para quem trabalha em `frontend/`.
+> **Já está implementada.** Esta seção deixou de ser uma proposta e passou a
+> descrever o que existe em `frontend/`. Se você for mexer na autenticação do
+> frontend, leia isto antes.
 
-O TODO original em `frontend/src/lib/auth.ts` enviava
-`{ email, name, avatar, googleId }`. Esse formato foi descartado: ele faria o backend
-confiar nos dados que o navegador afirma, e qualquer um poderia criar conta com o e-mail
-de outra pessoa. O backend espera o `id_token` e extrai os dados de dentro dele, depois de
-verificar a assinatura com o Google.
+O login por e-mail/senha e o login pelo Google compartilham **uma única
+sessão**, gerenciada pelo NextAuth. O `proxy.ts` continua sendo a única coisa
+que decide o que é rota pública ou privada.
 
-A chamada fica no callback `jwt`, não no `signIn`. O `jwt` recebe `account` preenchido
-exatamente no primeiro login, e é o único lugar onde dá para gravar o resultado no token.
+### Onde as peças estão
 
-### O access token expira em 15 minutos — o callback `jwt` precisa renovar
+| Arquivo | Papel |
+|---|---|
+| `frontend/src/lib/auth.ts` | os três providers, a renovação de token e a revogação no logout |
+| `frontend/src/app/(public)/login/page.tsx` | tela com as abas Entrar / Criar conta |
+| `frontend/types/next-auth.d.ts` | tipagem de `session.backendToken` e `user.id` |
+| `frontend/src/services/api.ts` | helper `comToken()` |
+| `frontend/src/app/(private)/dashboard/page.tsx` | exemplo de chamada autenticada |
 
-`JWT_ACCESS_EXPIRES=15m`, mas o cookie de sessão do NextAuth dura 30 dias por padrão.
-Se o callback só gravar `backendToken` no primeiro login (quando `account.id_token`
-existe), a partir do minuto 16 toda chamada autenticada ao backend passa a devolver
-401, e o usuário continua "logado" na interface do NextAuth sem perceber. O backend já
-entrega a rota que resolve isso — `POST /auth/refresh`, que troca um refresh token
-válido por um par novo — mas é responsabilidade do frontend chamá-la antes do access
-token vencer. O snippet abaixo guarda um instante de expiração aproximado (um pouco
-antes do vencimento real, para dar folga) e renova sempre que o `jwt` roda sem um
-`account` novo:
+### Os três providers
 
-```ts
-callbacks: {
-  async jwt({ token, account }) {
-    // account só vem preenchido no primeiro login.
-    if (account?.id_token) {
-      try {
-        const { data } = await api.post("/auth/social-login", {
-          idToken: account.id_token,
-        });
-        token.backendToken = data.accessToken;
-        token.refreshToken = data.refreshToken;
-        token.backendTokenExpiraEm = Date.now() + 14 * 60 * 1000;
-        token.id = data.usuario.id;
-      } catch (error) {
-        console.error("Erro ao autenticar no backend:", error);
-        token.backendToken = undefined;
-        token.refreshToken = undefined;
-      }
-      return token;
-    }
+- **`google`** — o frontend faz o OAuth, e o callback `jwt` manda o
+  `account.id_token` para `POST /auth/social-login`. O backend verifica a
+  assinatura com o Google e devolve o nosso par de tokens. O backend **nunca**
+  aceita e-mail, nome ou id afirmados pelo cliente.
+- **`senha`** — `POST /auth/login`. Devolve `null` em qualquer falha, para não
+  distinguir senha errada de e-mail inexistente — o backend já se recusa a
+  distinguir, e o frontend não pode reintroduzir a diferença.
+- **`cadastro`** — `POST /auth/registrar`. Existe como provider, e não como
+  uma chamada solta seguida de login, porque `/auth/registrar` já devolve um
+  par de tokens: fazer as duas coisas separadas deixaria o primeiro par órfão,
+  válido por 7 dias e sem ninguém para revogá-lo.
 
-    // Chamadas seguintes do NextAuth ao callback jwt (getSession,
-    // getServerSession, useSession): sem account novo, so renova quando o
-    // access token atual esta perto de vencer.
-    const precisaRenovar =
-      typeof token.refreshToken === "string" &&
-      (typeof token.backendTokenExpiraEm !== "number" ||
-        Date.now() > token.backendTokenExpiraEm);
+### Renovação de sessão
 
-    if (precisaRenovar) {
-      try {
-        const { data } = await api.post("/auth/refresh", {
-          refreshToken: token.refreshToken,
-        });
-        token.backendToken = data.accessToken;
-        token.refreshToken = data.refreshToken;
-        token.backendTokenExpiraEm = Date.now() + 14 * 60 * 1000;
-      } catch (error) {
-        // Refresh token expirado (7 dias) ou ja revogado: a sessao do
-        // backend acabou. Limpa os campos para que session() abaixo pare
-        // de anexar um Authorization invalido; a UI deve tratar a ausencia
-        // de backendToken como "precisa logar nas rotas do backend de
-        // novo", mesmo com o cookie do NextAuth ainda valido.
-        console.error("Erro ao renovar sessao no backend:", error);
-        token.backendToken = undefined;
-        token.refreshToken = undefined;
-      }
-    }
+O access token vale 15 minutos; o cookie do NextAuth, 30 dias. Sem renovação,
+o usuário continuaria "logado" na interface com toda chamada devolvendo 401.
 
-    return token;
-  },
+O callback `jwt` guarda `expiraEm` (lido do `exp` do próprio access token) e
+chama `POST /auth/refresh` um minuto antes de vencer. Se a renovação falhar,
+o token recebe `erro` e a sessão expõe `session.erro` — o dashboard usa isso
+para pedir que o usuário entre de novo, em vez de mostrar erro genérico.
 
-  async session({ session, token }) {
-    session.backendToken = token.backendToken as string | undefined;
-    if (session.user) {
-      session.user.id = token.id as string;
-    }
-    return session;
-  },
-}
-```
+### Logout
 
-O callback `signIn` pode devolver `true` ou ser removido.
+O evento `signOut` chama `POST /auth/logout`, que revoga o refresh token.
 
-### Logout precisa revogar o refresh token no backend
+⚠️ **O access token continua válido até expirar**, mesmo depois do logout. Ele
+é autocontido e não consultamos lista de revogados a cada requisição. A janela
+é de no máximo 15 minutos. Para este sistema é aceitável; se um dia não for, a
+mudança é checar revogação no `JwtStrategy`.
 
-Se o usuário sair só pelo NextAuth (`signOut()`), o cookie de sessão some mas a linha
-em `refresh_token` continua válida por até 7 dias (`JWT_REFRESH_EXPIRES`) — o backend
-descreve `/auth/logout` como a rota que revoga isso, então algo precisa chamá-la. Com a
-estratégia JWT do NextAuth, o evento `signOut` recebe o token decodificado, que já tem
-o `refreshToken` gravado pelo callback acima:
+### Chamadas autenticadas
+
+Não existe interceptor global de propósito: `api` é usada tanto no cliente
+quanto em Server Components, e `getSession` do `next-auth/react` só funciona no
+cliente. O token vai explícito, o que funciona nos dois lados e deixa visível
+quais rotas exigem sessão.
 
 ```ts
-events: {
-  async signOut({ token }) {
-    if (typeof token.refreshToken === "string") {
-      try {
-        await api.post("/auth/logout", { refreshToken: token.refreshToken });
-      } catch (error) {
-        console.error("Erro ao revogar sessao no backend:", error);
-      }
-    }
-  },
-}
+// Client Component
+const { data: sessao } = useSession();
+const { data } = await api.get("/usuarios/eu", comToken(sessao?.backendToken));
+
+// Server Component
+const sessao = await getServerSession(authOptions);
+const { data } = await api.get("/usuarios/eu", comToken(sessao?.backendToken));
 ```
 
-⚠️ **Nota franca sobre o que o logout revoga de fato**: `/auth/logout` revoga só o
-*refresh* token. O *access* token já emitido continua válido até expirar naturalmente
-— o backend não mantém lista de revogação de access tokens (seria uma consulta a mais
-em toda requisição autenticada, o que o `JwtStrategy` já faz por outro motivo, ver
-abaixo). Na prática isso é uma janela de até 15 minutos em que um access token
-vazado antes do logout ainda funcionaria, mesmo com o refresh já revogado. Para este
-sistema esse risco foi aceito conscientemente por causa do `JWT_ACCESS_EXPIRES` curto;
-se o produto precisar de revogação imediata de access token, isso é uma mudança de
-design (ex.: denylist ou reduzir ainda mais o TTL), não um bug deste comportamento.
+### O que falta
 
-Para anexar o token às chamadas autenticadas, em `frontend/src/services/api.ts`:
+`GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` estão vazios, então o botão
+"Continuar com Google" não funciona ainda — o backend avisa isso no boot. O
+login por e-mail e senha funciona por inteiro e não depende disso.
 
-```ts
-api.interceptors.request.use(async (config) => {
-  const session = await getSession();
-  if (session?.backendToken) {
-    config.headers.Authorization = `Bearer ${session.backendToken}`;
-  }
-  return config;
-});
-```
-
-⚠️ `getSession` vem de `next-auth/react` e só funciona no cliente. As funções
-`recuperar`/`criar` de `api.ts` também são chamadas de Server Components, onde
-`getSession` não funciona e é preciso `getServerSession(authOptions)` (que dispara o
-mesmo callback `jwt` acima, então também se beneficia da renovação). Isto não tem uma
-resposta única deste lado do backend — decidir a forma de cobrir os dois casos é escolha
-do frontend, por exemplo:
-
-- aceitar o token por parâmetro nas funções de `api.ts` chamadas de Server Components,
-  resolvido com `getServerSession(authOptions)` no componente que chama; ou
-- duas instâncias/wrappers de `api.ts`, uma para cliente (via interceptor acima) e outra
-  para servidor (recebendo a sessão já resolvida).
-
-Este README não vai além disso porque a escolha depende de como as Server Components
-do frontend estão organizadas hoje, algo que este documento não tem visibilidade para
-decidir com segurança.
-
-Tipar `session.backendToken`, `user.id` e os campos novos de `token` (`refreshToken`,
-`backendTokenExpiraEm`) exige um `frontend/types/next-auth.d.ts` com
-`declare module "next-auth"` e `declare module "next-auth/jwt"`.
-
-Em `frontend/src/proxy.ts`, o bloco "ESQUELETO FUTURO" pode passar a checar
-`sessionToken?.backendToken`.
-
-⚠️ `/auth/social-login` está inoperante enquanto `GOOGLE_CLIENT_ID` não for preenchido
-no `.env` do backend (ver seção de variáveis de ambiente acima) — o valor tem que ser
-igual ao usado no frontend.
 
 ## Testes
 

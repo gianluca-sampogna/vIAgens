@@ -2,15 +2,10 @@
 
 import styles from './styles.module.css'
 import Link from 'next/link';
-import { useSession, signOut, signIn } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 const Header = () => {
   const { data: session, status } = useSession();
-
-  const handleGoogleLogin = () => {
-      signIn("google", { callbackUrl: "/dashboard" });
-    };
-  
 
   return (
     <header className={styles.header}>
@@ -35,9 +30,12 @@ const Header = () => {
             Olá, {session.user?.name?.split(" ")[0]} (Sair)
           </button>
         ) : (
-          // <Link href="/login">
-            <button className={styles.loginButton} onClick={handleGoogleLogin}>Acessar</button>
-          // </Link>
+          // Leva para a tela de login, que oferece e-mail/senha e Google.
+          // Antes este botao disparava o fluxo do Google direto, o que deixava
+          // o cadastro por senha sem nenhum caminho de entrada.
+          <Link href="/login">
+            <button className={styles.loginButton}>Acessar</button>
+          </Link>
         )}
       </section>
     </header>
