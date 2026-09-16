@@ -1,6 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { criarAppDeTeste, limparUsuariosDeTeste } from './utilitarios-teste';
+import {
+  criarAppDeTeste,
+  limparThrottler,
+  limparUsuariosDeTeste,
+} from './utilitarios-teste';
 import { SupabaseService } from '../src/banco/supabase.service';
 import { UsuariosRepository } from '../src/usuarios/usuarios.repository';
 
@@ -13,6 +17,7 @@ describe('Autenticacao (e2e)', () => {
 
   beforeEach(async () => {
     await limparUsuariosDeTeste(app, 'auth');
+    limparThrottler(app);
   });
 
   afterAll(async () => {
@@ -277,6 +282,25 @@ describe('Autenticacao (e2e)', () => {
       const segundo = await repositorio.vincularOuCriarPorGoogle(perfil);
 
       expect(segundo.id).toBe(primeiro.id);
+    });
+  });
+
+  describe('Limite de requisicoes', () => {
+    it('bloqueia com 429 apos exceder o limite em /auth/login', async () => {
+      const tentativas = [];
+
+      for (let i = 0; i < 12; i += 1) {
+        tentativas.push(
+          request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email: 'ninguem@teste.viagens', senha: 'qualquer-coisa' }),
+        );
+      }
+
+      const respostas = await Promise.all(tentativas);
+      const bloqueadas = respostas.filter((r) => r.status === 429);
+
+      expect(bloqueadas.length).toBeGreaterThan(0);
     });
   });
 });

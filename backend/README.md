@@ -1,114 +1,168 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend — vIAgens
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Serviço NestJS de autenticação e usuário. Roda na porta 3333, que é a que o
+frontend espera em `NEXT_PUBLIC_API_URL`.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Como rodar
 
 ```bash
-$ yarn install
+cd backend
+yarn install
+cp .env.example .env    # preencha os valores
+# as migrations ja estao aplicadas; para reaplicar num projeto novo,
+# rode os arquivos de supabase/migrations/ em ordem no SQL Editor
+yarn start:dev
 ```
 
-## Compile and run the project
+Verifique com `curl http://localhost:3333/saude` — deve responder `{"status":"ok"}`.
+
+## Variáveis de ambiente
+
+Veja `.env.example`. Três armadilhas comuns:
+
+- `SUPABASE_SERVICE_ROLE_KEY` tem que ser a chave **`service_role`**, não a publicável.
+  A publicável esbarra no RLS, que nega tudo — o sintoma é toda consulta voltar vazia
+  em vez de dar erro de permissão, o que confunde. Essa chave dá acesso total ao banco:
+  ela só existe em `backend/.env`, nunca no `frontend/`, cujo bundle é público.
+- `GOOGLE_CLIENT_ID` tem que ser **idêntico** ao do frontend. É contra ele que o `aud`
+  do `id_token` é validado; se divergir, todo login social devolve 401.
+- Hoje `GOOGLE_CLIENT_ID` está **vazio** no `.env` deste projeto. O `VerificadorGoogle`
+  avisa isso no boot (log de warning) e `/auth/social-login` fica inoperante até alguém
+  do frontend informar o valor real. `/auth/registrar` e `/auth/login` funcionam
+  normalmente sem ele.
+
+## Rotas
+
+| Método | Rota | Auth | Descrição |
+|---|---|---|---|
+| `GET` | `/saude` | — | disponibilidade |
+| `POST` | `/auth/registrar` | — | cadastro com e-mail e senha |
+| `POST` | `/auth/login` | — | login com e-mail e senha |
+| `POST` | `/auth/social-login` | — | login com `id_token` do Google |
+| `POST` | `/auth/refresh` | — | troca o refresh token por um par novo |
+| `POST` | `/auth/logout` | — | revoga o refresh token |
+| `GET` | `/usuarios/eu` | Bearer | perfil do usuário autenticado |
+| `PATCH` | `/usuarios/eu` | Bearer | edita nome e preferências gerais |
+
+Erros seguem sempre `{ statusCode, mensagem, timestamp }`.
+
+Rotas `/auth/*` têm limite de 10 requisições por minuto por IP. O limite vale só ali:
+aplicá-lo globalmente atrapalharia o uso normal da API quando as rotas de roteiro
+existirem.
+
+## Integração com o frontend
+
+> Esta seção é para quem trabalha em `frontend/`.
+
+O TODO original em `frontend/src/lib/auth.ts` enviava
+`{ email, name, avatar, googleId }`. Esse formato foi descartado: ele faria o backend
+confiar nos dados que o navegador afirma, e qualquer um poderia criar conta com o e-mail
+de outra pessoa. O backend espera o `id_token` e extrai os dados de dentro dele, depois de
+verificar a assinatura com o Google.
+
+A chamada fica no callback `jwt`, não no `signIn`. O `jwt` recebe `account` preenchido
+exatamente no primeiro login, e é o único lugar onde dá para gravar o resultado no token.
+
+```ts
+callbacks: {
+  async jwt({ token, account }) {
+    // account só vem preenchido no primeiro login
+    if (account?.id_token) {
+      try {
+        const { data } = await api.post("/auth/social-login", {
+          idToken: account.id_token,
+        });
+        token.backendToken = data.accessToken;
+        token.refreshToken = data.refreshToken;
+        token.id = data.usuario.id;
+      } catch (error) {
+        console.error("Erro ao autenticar no backend:", error);
+      }
+    }
+    return token;
+  },
+
+  async session({ session, token }) {
+    session.backendToken = token.backendToken as string | undefined;
+    if (session.user) {
+      session.user.id = token.id as string;
+    }
+    return session;
+  },
+}
+```
+
+O callback `signIn` pode devolver `true` ou ser removido.
+
+Para anexar o token às chamadas autenticadas, em `frontend/src/services/api.ts`:
+
+```ts
+api.interceptors.request.use(async (config) => {
+  const session = await getSession();
+  if (session?.backendToken) {
+    config.headers.Authorization = `Bearer ${session.backendToken}`;
+  }
+  return config;
+});
+```
+
+⚠️ `getSession` vem de `next-auth/react` e só funciona no cliente. As funções
+`recuperar`/`criar` de `api.ts` também são chamadas de Server Components, onde é preciso
+`getServerSession(authOptions)`. Vale decidir como cobrir os dois lados — por exemplo,
+aceitar o token por parâmetro nas chamadas de servidor.
+
+Tipar `session.backendToken` e `user.id` exige um `frontend/types/next-auth.d.ts` com
+`declare module "next-auth"`.
+
+Em `frontend/src/proxy.ts`, o bloco "ESQUELETO FUTURO" pode passar a checar
+`sessionToken?.backendToken`.
+
+⚠️ `/auth/social-login` está inoperante enquanto `GOOGLE_CLIENT_ID` não for preenchido
+no `.env` do backend (ver seção de variáveis de ambiente acima) — o valor tem que ser
+igual ao usado no frontend.
+
+## Testes
 
 ```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+yarn test        # unitarios (Vitest)
+yarn test:e2e    # integracao (Vitest); usa o banco real do Supabase
 ```
 
-## Run tests
+Os testes e2e escrevem no banco configurado em `.env`. Cada arquivo de spec usa um
+sufixo de e-mail próprio (`@auth.teste.viagens`, `@usuarios.teste.viagens`) e só apaga
+usuários com esse sufixo no seu `beforeEach`/`afterAll`.
 
-```bash
-# unit tests
-$ yarn run test
+Os arquivos e2e rodam com `fileParallelism: false` (ver `vitest.config.e2e.ts`) — ou
+seja, um arquivo por vez, nunca em paralelo. Os specs compartilham o mesmo banco
+Supabase; se dois arquivos rodassem ao mesmo tempo, o `beforeEach` de um apagaria
+usuários (e invalidaria tokens) que o outro acabou de criar e ainda está usando,
+produzindo 401/404 instáveis. Isso é proposital: não reative o paralelismo por arquivo
+sem repensar o isolamento dos dados de teste.
 
-# e2e tests
-$ yarn run test:e2e
+## Decisões registradas
 
-# test coverage
-$ yarn run test:cov
-```
+Dois desvios conscientes do diagrama de classes, aprovados pela equipe:
 
-## Deployment
+1. `Administrador` é uma coluna `papel`, não uma tabela. A classe não tem atributo próprio,
+   só métodos, e herança em banco relacional custaria um join em toda consulta.
+2. `senhaHash` é opcional, e o provedor social fica em tabela separada — quem entra pelo
+   Google não tem senha.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Acesso ao banco
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+O backend usa `supabase-js` com a chave `service_role`, não um ORM. Não há Prisma nem
+connection string de Postgres neste projeto. Consequências que valem saber antes de
+mexer no código:
 
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Não existe transação pelo cliente.** O PostgREST não faz multi-statement. Quando uma
+  operação precisa ser atômica, ela vira função do banco — é o caso de
+  `vincular_ou_criar_por_google`, em `supabase/migrations/0002`.
+- **Erro não vira exceção.** O `supabase-js` devolve `{ data, error }`; ignorar o `error`
+  faz falha de banco passar como "nenhum resultado". Por isso todo acesso passa por
+  `lancarSeErro` no repositório.
+- **A `service_role` ignora RLS.** As tabelas têm RLS habilitado sem nenhuma policy, o
+  que nega tudo por padrão para qualquer outra chave. A segurança efetiva das rotas está
+  inteiramente no código do NestJS — não há segunda linha de defesa no banco.
+- **Migrations são SQL versionado** em `supabase/migrations/`, aplicadas ao projeto
+  `ungwqcebvaczpkdajtec`. Schema novo significa arquivo novo, nunca edição de um já
+  aplicado.
