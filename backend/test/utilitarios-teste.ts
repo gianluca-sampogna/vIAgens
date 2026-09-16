@@ -57,7 +57,7 @@ export async function limparUsuariosDeTeste(
  * expira. Se limparmos so o storage, um timer antigo ainda dispara mais
  * tarde contra uma chave que ja foi apagada por um beforeEach seguinte,
  * "this.storage.get(key)" volta undefined, e desestruturar totalHits
- * disso lança excecao nao tratada dentro do callback. Isso so acontece
+ * disso lanca excecao nao tratada dentro do callback. Isso so acontece
  * se a suite levar mais de 60s de ponta a ponta (plausivel com hash
  * argon2 e varios beforeEach chamando /auth/registrar, e mais ainda em
  * maquina lenta ou CI carregado), entao cancelamos os timers pendentes

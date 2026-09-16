@@ -62,7 +62,7 @@ export class UsuariosRepository {
   /**
    * Cria o usuario e o registro de preferencias vazio. Nao ha transacao aqui:
    * o PostgREST nao a oferece. Se a segunda insercao falhar, o usuario fica
-   * sem preferencias — por isso atualizarPerfil usa upsert, que se recupera
+   * sem preferencias - por isso atualizarPerfil usa upsert, que se recupera
    * desse estado em vez de quebrar.
    */
   async criar(dados: DadosCriacaoUsuario): Promise<Usuario> {
