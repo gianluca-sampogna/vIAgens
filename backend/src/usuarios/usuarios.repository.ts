@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PostgrestError } from '@supabase/supabase-js';
 import { SupabaseService } from '../banco/supabase.service';
 import { Usuario, paraUsuario } from './usuario';
@@ -21,9 +25,6 @@ export type DadosAtualizacaoPerfil = {
   nome?: string;
   preferencias?: DadosPreferencias;
 };
-
-/** Codigo do PostgREST para "nenhuma linha retornada" com .single(). */
-const NENHUMA_LINHA = 'PGRST116';
 
 @Injectable()
 export class UsuariosRepository {
@@ -67,17 +68,23 @@ export class UsuariosRepository {
         avatar_url: dados.avatarUrl ?? null,
       })
       .select('*')
-      .single();
+      .maybeSingle();
 
     this.lancarSeErro(error, 'criar usuario');
 
+    if (!data) {
+      throw new InternalServerErrorException(
+        'Falha ao criar usuario: nenhuma linha retornada',
+      );
+    }
+
     const { error: erroPreferencias } = await this.supabase.cliente
       .from('preferencias_gerais')
-      .insert({ usuario_id: data!.id });
+      .insert({ usuario_id: data.id });
 
     this.lancarSeErro(erroPreferencias, 'criar preferencias do usuario');
 
-    return paraUsuario(data!);
+    return paraUsuario(data);
   }
 
   async atualizarPerfil(
@@ -128,10 +135,15 @@ export class UsuariosRepository {
       .update({ nome: dados.nome })
       .eq('id', id)
       .select('*')
-      .single();
+      .maybeSingle();
 
     this.lancarSeErro(error, 'atualizar usuario');
-    return paraUsuario(data!);
+
+    if (!data) {
+      throw new NotFoundException('Usuario nao encontrado');
+    }
+
+    return paraUsuario(data);
   }
 
   /**
@@ -139,7 +151,7 @@ export class UsuariosRepository {
    * Ignorar isso faz falha de banco passar como "nenhum resultado".
    */
   private lancarSeErro(erro: PostgrestError | null, acao: string): void {
-    if (!erro || erro.code === NENHUMA_LINHA) {
+    if (!erro) {
       return;
     }
 
