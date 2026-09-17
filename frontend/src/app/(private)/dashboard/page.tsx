@@ -1,133 +1,91 @@
-"use client";
+import { Plus, Clock, LayoutGrid, List, MoreVertical, FileText } from 'lucide-react'
+import style from './style.module.css'
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { api, comToken } from "@/services/api";
-import styles from "./styles.module.css";
+interface Viagem {
+  nome: string
+  dsc_viagem: string
+  accentColor: string
+  sources: number
+  updatedAt: string
+}
 
-type Preferencias = {
-  orcamentoReferencia: number | null;
-  interessesPadrao: string[];
-  estiloViagemPadrao: string | null;
-  climaPreferido: string | null;
-};
-
-type Perfil = {
-  id: string;
-  nome: string;
-  email: string;
-  avatarUrl: string | null;
-  papel: string;
-  criadoEm: string;
-  preferencias: Preferencias;
-};
+const mock_viagens: Viagem[] = [
+  {
+    nome: 'Viagem para o Japão',
+    dsc_viagem: 'Analysis of major LLM alignment protocols, policy briefs, and computational resource allocation reports.',
+    accentColor: '#3B82F6',
+    sources: 8,
+    updatedAt: 'Opened 2 hours ago'
+  },
+  {
+    nome: 'Viagem para Domingos martins',
+    dsc_viagem: 'Synthesis of user feedback channels, priority features list, design system updates, and launch timelines.',
+    accentColor: '#A855F7',
+    sources: 4,
+    updatedAt: 'Edited yesterday'
+  },
+  
+]
 
 export default function Dashboard() {
-  const { data: sessao, status } = useSession();
-  const [perfil, setPerfil] = useState<Perfil | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (status !== "authenticated" || !sessao?.backendToken) {
-      return;
-    }
-
-    let cancelado = false;
-
-    api
-      .get<Perfil>("/usuarios/eu", comToken(sessao.backendToken))
-      .then(({ data }) => {
-        if (!cancelado) setPerfil(data);
-      })
-      .catch(() => {
-        if (!cancelado) {
-          setErro("Não foi possível carregar seu perfil. O backend está no ar?");
-        }
-      });
-
-    return () => {
-      cancelado = true;
-    };
-  }, [status, sessao?.backendToken]);
-
-  if (status === "loading") {
-    return <div className={styles.container}>Carregando...</div>;
-  }
-
-  // A sessao existe mas o backend nao renovou o token: o usuario precisa
-  // entrar de novo. Sem esta checagem ele veria um erro generico.
-  if (sessao?.erro) {
-    return (
-      <div className={styles.container}>
-        <p className={styles.erro}>
-          Sua sessão expirou. Saia e entre novamente.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.container}>
-      <div className={styles.conteudo}>
-        <h1 className={styles.titulo}>
-          Olá, {perfil?.nome ?? sessao?.user?.name ?? "viajante"}
-        </h1>
-        <p className={styles.subtitulo}>
-          Seu painel ainda não tem roteiros — a geração por IA é a próxima
-          entrega.
-        </p>
-
-        {erro && <p className={styles.erro}>{erro}</p>}
-
-        {perfil && (
-          <div className={styles.cartao}>
-            <h2 className={styles.tituloCartao}>
-              Dados vindos do backend
-              <span className={styles.selo}>GET /usuarios/eu</span>
-            </h2>
-
-            <dl className={styles.lista}>
-              <div className={styles.linha}>
-                <dt>E-mail</dt>
-                <dd>{perfil.email}</dd>
-              </div>
-              <div className={styles.linha}>
-                <dt>Papel</dt>
-                <dd>{perfil.papel}</dd>
-              </div>
-              <div className={styles.linha}>
-                <dt>Conta criada em</dt>
-                <dd>
-                  {new Date(perfil.criadoEm).toLocaleDateString("pt-BR")}
-                </dd>
-              </div>
-              <div className={styles.linha}>
-                <dt>Orçamento de referência</dt>
-                <dd>
-                  {perfil.preferencias.orcamentoReferencia === null
-                    ? "não definido"
-                    : perfil.preferencias.orcamentoReferencia.toLocaleString(
-                        "pt-BR",
-                        { style: "currency", currency: "BRL" },
-                      )}
-                </dd>
-              </div>
-              <div className={styles.linha}>
-                <dt>Interesses</dt>
-                <dd>
-                  {perfil.preferencias.interessesPadrao.length > 0
-                    ? perfil.preferencias.interessesPadrao.join(", ")
-                    : "nenhum ainda"}
-                </dd>
-              </div>
-              <div className={styles.linha}>
-                <dt>Clima preferido</dt>
-                <dd>{perfil.preferencias.climaPreferido ?? "não definido"}</dd>
-              </div>
-            </dl>
+    <div className={style.container}>
+      <section className={style.principal}>
+        <h1 className={style.txtBemVindo}>Bem vindo ao vIAgens</h1>
+        <h3 className={style.txtPersonalizador}>Seu personalizador de viagens. Planeje seu sonho com ajuda da IA.</h3>
+        <div className={style.novaViagem}>
+          <div className={style.iconPlus}>
+            <Plus size={20} />
           </div>
-        )}
-      </div>
+          <p className={style.txtNewImage}>Nova Viagem</p>
+          <p className={style.txtNewRoteiro}>Criar Novo Roteiro</p>
+        </div>
+      </section>
+      
+      <section className={style.secao_viagens}>
+        <div className={style.viagensRecentesHeader}>
+          <div className={style.viagensRecentesTitle}>
+            <Clock size={20} className={style.clockIcon} />
+            <h2 className={style.txtViagensRecentes}>Viagens recentes</h2>
+          </div>
+          {/* <div className={style.viewToggle}>
+            <button className={`${style.viewBtn} ${style.activeView}`} aria-label="Visualização em grade">
+              <LayoutGrid size={16} />
+            </button>
+            <button className={style.viewBtn} aria-label="Visualização em lista">
+              <List size={16} />
+            </button>
+          </div> */}
+        </div>
+
+        <section className={style.cards}>
+          {mock_viagens?.length > 0 &&
+            mock_viagens.map((item, index) => (
+              <div className={style.cardViagem} key={index}>
+                <div 
+                  className={style.accentBar} 
+                  style={{ backgroundColor: item.accentColor }} 
+                />
+                <div className={style.cardBody}>
+                  <div className={style.cardHeader}>
+                    <h3 className={style.cardTitle}>{item.nome}</h3>
+                    <button className={style.cardMenuBtn} aria-label="Opções">
+                      <MoreVertical size={16} />
+                    </button>
+                  </div>
+                  <p className={style.cardDescription}>{item.dsc_viagem}</p>
+                  <div className={style.cardFooter}>
+                    <div className={style.sourceBadge}>
+                      <FileText size={13} />
+                      <span>{item.sources} sources</span>
+                    </div>
+                    <span className={style.cardTimestamp}>{item.updatedAt}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </section>
+      </section>
     </div>
-  );
+  )
 }
