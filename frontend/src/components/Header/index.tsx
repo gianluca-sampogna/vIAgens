@@ -26,9 +26,11 @@ const Header = () => {
         {status === "loading" ? (
           <button className={styles.loginButton}>Acessar</button>
         ) : session ? (
-          <button onClick={() => signOut()} className={styles.loginButton}>
-            Olá, {session.user?.name?.split(" ")[0]} (Sair)
-          </button>
+          <Link href="/perfil">
+            <button className={styles.loginButton}>
+              Olá, {session.user?.name?.split(" ")[0] ?? "Usuário"}
+            </button>
+          </Link>
         ) : (
           // Leva para a tela de login, que oferece e-mail/senha e Google.
           // Antes este botao disparava o fluxo do Google direto, o que deixava
