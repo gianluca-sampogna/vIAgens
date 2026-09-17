@@ -1,69 +1,85 @@
-.container{
-    /* width: 2000px; */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    width: 100%;
-    gap: 0;
-    /* background-color: #c6c6c6; */
-    min-height: calc(100vh - 76px);
-    background-color: #0f0f0f;
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  gap: 0;
+  min-height: calc(100vh - 76px);
+  background-color: #0f0f0f;
+  transition: background-color 0.3s ease;
 }
 
-.conteudo{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    gap: 150px;
-    /* gap: 20px */
+:global([data-theme="light"]) .container {
+  background-color: #f8f9fa;
+}
+
+.conteudo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 150px;
 }
 
 .image {
-    width: 100%;
-    max-width: 400px; /* Ajuste aqui o tamanho máximo que você deseja (ex: 600px, 700px) */
-    height: auto;
-    object-fit: contain;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  object-fit: contain;
 }
 
-.secaoTexto{
-    gap: 50px;
-    display: flex;
-    flex-direction: column;
+.secaoTexto {
+  gap: 50px;
+  display: flex;
+  flex-direction: column;
 }
 
-.textoPrincipal{
-    color: #FFF;
-    text-align: center;
+.textoPrincipal {
+  color: #fff;
+  text-align: center;
+  transition: color 0.3s ease;
 }
 
-.botoes{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-
+:global([data-theme="light"]) .textoPrincipal {
+  color: #1f2937;
 }
 
-.botao{
-    height: 50px;
-    background-color: #FFF;
-    width: 200px;
-    justify-content: center;
-    display: flex;
-    align-items: center;
-    border-radius: 12px;
-    transition: transform 0.2s ease, background-color 0.2s ease; /* Transição suave */
+.botoes {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
 }
 
-.botao:hover{
-    transform: scale(1.06); /* Aumenta 6% sem deslocar o restante da página */
-    cursor: pointer;
+.botao {
+  height: 50px;
+  background-color: #fff;
+  color: #0f0f0f;
+  width: 200px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
+.botao:hover {
+  transform: scale(1.06);
+  cursor: pointer;
+}
 
-.textoBtn{
-    font-weight: bold;
+:global([data-theme="light"]) .botao {
+  background-color: #1f2937;
+  color: #ffffff;
+}
+
+:global([data-theme="light"]) .botao:hover {
+  background-color: #111827;
+}
+
+.textoBtn {
+  font-weight: bold;
 }
 
 @media (max-width: 640px) {
@@ -74,16 +90,16 @@
     max-width: 240px;
   }
   .textoPrincipal {
-    font-size: 22px; 
+    font-size: 22px;
   }
   .botoes {
-    flex-direction: column; 
+    flex-direction: column;
     gap: 16px;
     justify-content: center;
-    align-items: center ;
+    align-items: center;
   }
   .botao {
     width: 100%;
-    max-width: 280px; 
+    max-width: 280px;
   }
 }

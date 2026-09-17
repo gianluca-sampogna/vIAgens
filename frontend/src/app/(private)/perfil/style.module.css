@@ -1,15 +1,48 @@
-/* Padrão visual da área privada (Dashboard / NotebookLM em tema claro):
-   Fundo da página #F8F9FA, cartões #FFFFFF com borda #E5E7EB, texto #1F2937 / #5F6368,
-   entradas #FFFFFF com borda #D1D5DB, acento azul #1A73E8 e botões destacados. */
+/* Suporte dinâmico a Tema Claro e Escuro (Light & Dark mode) */
 
 .container {
   min-height: calc(100vh - 76px);
-  background-color: #F8F9FA;
-  color: #1F2937;
+  background-color: var(--bg-page, #F8F9FA);
+  color: var(--text-primary, #1F2937);
   padding: 40px 18px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:global([data-theme="light"]) .container {
+  --bg-page: #F8F9FA;
+  --bg-card: #FFFFFF;
+  --border-card: #E5E7EB;
+  --text-primary: #1F2937;
+  --text-secondary: #5F6368;
+  --bg-input: #FFFFFF;
+  --border-input: #D1D5DB;
+  --text-input: #1F2937;
+  --bg-badge: #E8F0FE;
+  --text-badge: #1A73E8;
+  --border-badge: #C2E7FF;
+  --bg-tag: #F3F4F6;
+  --border-tag: #E5E7EB;
+  --text-tag: #374151;
+}
+
+:global([data-theme="dark"]) .container {
+  --bg-page: #0f0f0f;
+  --bg-card: #171717;
+  --border-card: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1a1;
+  --bg-input: #0f0f0f;
+  --border-input: #333333;
+  --text-input: #ffffff;
+  --bg-badge: #0f0f0f;
+  --text-badge: #ea3140;
+  --border-badge: #ea3140;
+  --bg-tag: #0f0f0f;
+  --border-tag: #333333;
+  --text-tag: #ffffff;
 }
 
 .wrapper {
@@ -22,8 +55,8 @@
 
 /* Header Section */
 .headerCard {
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background-color: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-card, #E5E7EB);
   border-radius: 16px;
   padding: 28px 32px;
   display: flex;
@@ -31,6 +64,7 @@
   justify-content: space-between;
   gap: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
 }
 
 .userInfo {
@@ -43,14 +77,14 @@
   width: 68px;
   height: 68px;
   border-radius: 50%;
-  background-color: #E8F0FE;
-  color: #1A73E8;
+  background-color: var(--bg-badge, #E8F0FE);
+  color: var(--text-badge, #1A73E8);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
   font-weight: 700;
-  border: 2px solid #D2E3FC;
+  border: 2px solid var(--border-badge, #D2E3FC);
   flex-shrink: 0;
   overflow: hidden;
   object-fit: cover;
@@ -71,14 +105,14 @@
 .userName {
   font-size: 24px;
   font-weight: 700;
-  color: #1F2937;
+  color: var(--text-primary, #1F2937);
   margin: 0;
 }
 
 .userBadge {
-  background-color: #E8F0FE;
-  color: #1A73E8;
-  border: 1px solid #C2E7FF;
+  background-color: var(--bg-badge, #E8F0FE);
+  color: var(--text-badge, #1A73E8);
+  border: 1px solid var(--border-badge, #C2E7FF);
   padding: 3px 10px;
   border-radius: 12px;
   font-size: 12px;
@@ -89,7 +123,7 @@
 
 .userEmail {
   font-size: 14px;
-  color: #5F6368;
+  color: var(--text-secondary, #5F6368);
   margin: 0;
   display: flex;
   align-items: center;
@@ -98,7 +132,8 @@
 
 .createdDate {
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--text-secondary, #9CA3AF);
+  opacity: 0.8;
 }
 
 /* SignOut Button */
@@ -144,26 +179,27 @@
 }
 
 .card {
-  background-color: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background-color: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-card, #E5E7EB);
   border-radius: 16px;
   padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
 }
 
 .cardTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #1F2937;
+  color: var(--text-primary, #1F2937);
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid #F3F4F6;
+  border-bottom: 1px solid var(--border-card, #F3F4F6);
 }
 
 .cardTitle svg {
@@ -178,7 +214,7 @@
 }
 
 .label {
-  color: #374151;
+  color: var(--text-primary, #374151);
   font-size: 14px;
   font-weight: 500;
 }
@@ -187,9 +223,9 @@
   height: 44px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1.5px solid #D1D5DB;
-  background-color: #FFFFFF;
-  color: #1F2937;
+  border: 1.5px solid var(--border-input, #D1D5DB);
+  background-color: var(--bg-input, #FFFFFF);
+  color: var(--text-input, #1F2937);
   font-size: 15px;
   font-family: inherit;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -202,7 +238,7 @@
 }
 
 .input::placeholder {
-  color: #9CA3AF;
+  color: var(--text-secondary, #9CA3AF);
 }
 
 /* Tags/Interests Section */
@@ -214,9 +250,9 @@
 }
 
 .tag {
-  background-color: #F3F4F6;
-  color: #374151;
-  border: 1px solid #E5E7EB;
+  background-color: var(--bg-tag, #F3F4F6);
+  color: var(--text-tag, #374151);
+  border: 1px solid var(--border-tag, #E5E7EB);
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 14px;
@@ -228,7 +264,7 @@
 .removeTag {
   background: none;
   border: none;
-  color: #6B7280;
+  color: var(--text-secondary, #6B7280);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
@@ -249,9 +285,9 @@
 
 .addTagButton {
   height: 44px;
-  background-color: #E8F0FE;
-  color: #1A73E8;
-  border: 1px solid #D2E3FC;
+  background-color: var(--bg-badge, #E8F0FE);
+  color: var(--text-badge, #1A73E8);
+  border: 1px solid var(--border-badge, #D2E3FC);
   padding: 0 18px;
   border-radius: 10px;
   font-size: 14px;
@@ -329,19 +365,19 @@
 /* Loading State */
 .loadingContainer {
   min-height: calc(100vh - 76px);
-  background-color: #F8F9FA;
+  background-color: var(--bg-page, #F8F9FA);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 16px;
-  color: #5F6368;
+  color: var(--text-secondary, #5F6368);
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #E5E7EB;
+  border: 3px solid var(--border-card, #E5E7EB);
   border-top-color: #1A73E8;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

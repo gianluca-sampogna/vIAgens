@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "@/styles/globals.css";
 import { AuthProvider } from "@/providers/session-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 import { Header } from "@/components/Header";
 
 const roboto = Roboto({
@@ -85,10 +86,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={roboto.className}>
       <body>
-        <AuthProvider>
-          <Header />
-          {children}
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <Header />
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

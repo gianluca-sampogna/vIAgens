@@ -1,11 +1,14 @@
 "use client";
 
-import styles from './styles.module.css'
+import styles from './styles.module.css';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/providers/theme-provider';
 
 const Header = () => {
   const { data: session, status } = useSession();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className={styles.header}>
@@ -16,33 +19,36 @@ const Header = () => {
               v<span>IA</span>gens
             </h1>
           </Link>
-          {/* {session?.user && (
-            <Link href="/dashboard" className={styles.link}>
-              Meu Painel
-            </Link>
-          )} */}
         </nav>
 
-        {status === "loading" ? (
-          <button className={styles.loginButton}>Acessar</button>
-        ) : session ? (
-          <Link href="/perfil">
-            <button className={styles.loginButton}>
-              Olá, {session.user?.name?.split(" ")[0] ?? "Usuário"}
-            </button>
-          </Link>
-        ) : (
-          // Leva para a tela de login, que oferece e-mail/senha e Google.
-          // Antes este botao disparava o fluxo do Google direto, o que deixava
-          // o cadastro por senha sem nenhum caminho de entrada.
-          <Link href="/login">
+        <div className={styles.actions}>
+          {/* Botão de Alternância de Tema (Sol / Lua) */}
+          <button
+            onClick={toggleTheme}
+            className={styles.themeButton}
+            title={theme === "light" ? "Alternar para Modo Escuro" : "Alternar para Modo Claro"}
+            aria-label="Alternar Tema"
+          >
+            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+
+          {status === "loading" ? (
             <button className={styles.loginButton}>Acessar</button>
-          </Link>
-        )}
+          ) : session ? (
+            <Link href="/perfil">
+              <button className={styles.loginButton}>
+                Olá, {session.user?.name?.split(" ")[0] ?? "Usuário"}
+              </button>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <button className={styles.loginButton}>Acessar</button>
+            </Link>
+          )}
+        </div>
       </section>
     </header>
   );
 }
 
-export { Header }
-
+export { Header };

@@ -198,7 +198,7 @@ export default function PerfilPage() {
           </div>
 
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: "/" })}
             className={styles.signOutButton}
             title="Sair da sua conta"
           >
