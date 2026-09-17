@@ -1,0 +1,166 @@
+/* Segue a linguagem visual da landing: fundo #0f0f0f, texto branco,
+   acento #ea3140 do logo, botao principal branco de cantos arredondados. */
+
+.container {
+  min-height: calc(100vh - 76px);
+  background-color: #0f0f0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 18px;
+}
+
+.cartao {
+  width: 100%;
+  max-width: 400px;
+  background-color: #171717;
+  border: 1px solid #262626;
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.abas {
+  display: flex;
+  gap: 8px;
+  background-color: #0f0f0f;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.aba {
+  flex: 1;
+  padding: 10px 0;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  color: #a1a1a1;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.aba:hover {
+  color: #fff;
+}
+
+.abaAtiva {
+  background-color: #fff;
+  color: #0f0f0f;
+  font-weight: bold;
+}
+
+.abaAtiva:hover {
+  color: #0f0f0f;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rotulo {
+  color: #d4d4d4;
+  font-size: 14px;
+}
+
+.entrada {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid #333;
+  background-color: #0f0f0f;
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.entrada:focus {
+  outline: none;
+  border-color: #fff;
+}
+
+.ajuda {
+  color: #777;
+  font-size: 12px;
+}
+
+.erro {
+  color: #ea3140;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.botaoPrincipal {
+  height: 48px;
+  margin-top: 8px;
+  background-color: #fff;
+  color: #0f0f0f;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.botaoPrincipal:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.botaoPrincipal:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #666;
+  font-size: 13px;
+}
+
+.separador::before,
+.separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #2a2a2a;
+}
+
+.botaoGoogle {
+  height: 48px;
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid #fff;
+  border-radius: 24px;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.botaoGoogle:hover {
+  background-color: #fff;
+  color: #0f0f0f;
+  font-weight: bold;
+}
+
+@media (max-width: 480px) {
+  .cartao {
+    padding: 24px;
+  }
+}

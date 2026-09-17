@@ -1,0 +1,257 @@
+@startuml diagrama-classes-guia-viagens
+
+title Guia de vIAgens — Diagrama de Classes (v2)
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam classFontSize 13
+skinparam classAttributeFontSize 12
+skinparam classFontName Helvetica
+skinparam defaultFontName Helvetica
+skinparam roundcorner 6
+skinparam classBorderColor #26282B
+skinparam classBackgroundColor #FAFAF8
+skinparam packageBorderColor #26282B
+skinparam arrowColor #26282B
+skinparam noteBackgroundColor #E8DCC4
+skinparam noteBorderColor #B8873B
+skinparam titleFontSize 16
+
+legend top left
+  <b>v2 — atualizado a partir da implementação</b>
+  Sólido = implementado e em funcionamento.
+  Tracejado = modelado, ainda não implementado (próxima entrega).
+  Ver notas para as decisões que divergem da v1.
+endlegend
+
+' ==================== Contas e papéis (IMPLEMENTADO) ====================
+enum Papel {
+  USUARIO
+  ADMINISTRADOR
+}
+note right of Papel
+  <b>Mudança da v1.</b> Na v1, Administrador
+  era subclasse de Usuario. Virou um atributo
+  porque a subclasse não tinha estado próprio,
+  só comportamento: herança exigiria um join
+  em toda consulta para distinguir algo que
+  um enum resolve.
+  O controle continua sendo RBAC (RNF10),
+  aplicado por um guard na camada de serviço.
+end note
+
+class Usuario {
+  -id: UUID
+  -nome: String
+  -email: String
+  -senhaHash: String [0..1]
+  -avatarUrl: String [0..1]
+  -papel: Papel
+  -criadoEm: DateTime
+  -atualizadoEm: DateTime
+}
+note left of Usuario
+  <b>Mudança da v1.</b> senhaHash passou a ser
+  opcional: quem entra apenas pelo Google não
+  tem senha na plataforma.
+
+  Os comportamentos que a v1 punha aqui
+  (criarConta, autenticar, editarPreferencias,
+  consultarHistorico) vivem na camada de
+  serviço — ver ServicoAutenticacao e
+  ServicoUsuario. A entidade carrega dados;
+  a regra fica no serviço.
+end note
+
+class PreferenciasGerais {
+  -orcamentoReferencia: BigDecimal [0..1]
+  -interessesPadrao: List<String>
+  -estiloViagemPadrao: String [0..1]
+  -climaPreferido: String [0..1]
+}
+
+enum ProvedorSocial {
+  GOOGLE
+}
+
+class ContaSocial {
+  -id: UUID
+  -provedor: ProvedorSocial
+  -provedorContaId: String
+  -criadoEm: DateTime
+}
+note right of ContaSocial
+  <b>Nova na v2.</b> Não existia na modelagem
+  original, mas o login social exige.
+  Tabela própria em vez de coluna em Usuario
+  para que um provedor novo (Apple, GitHub)
+  entre como linha, não como alteração de
+  esquema.
+  Único por (provedor, provedorContaId).
+end note
+
+class RefreshToken {
+  -id: UUID
+  -tokenHash: String
+  -expiraEm: DateTime
+  -revogadoEm: DateTime [0..1]
+  -criadoEm: DateTime
+}
+note right of RefreshToken
+  <b>Nova na v2.</b> Sessão persistida para
+  permitir renovação e revogação.
+  Guarda apenas o hash sha256 do token:
+  um vazamento da tabela não entrega
+  sessão de ninguém.
+  Revogar o refresh é o que permite derrubar
+  a sessão de um usuário banido (RF16).
+end note
+
+' ==================== Camada de serviço (IMPLEMENTADO) ====================
+class ServicoAutenticacao {
+  +registrar(dados): RespostaAutenticacao
+  +login(email, senha): RespostaAutenticacao
+  +loginSocial(idToken): RespostaAutenticacao
+}
+
+class ServicoUsuario {
+  +buscarPerfil(id): UsuarioPublico
+  +atualizarPerfil(id, dados): UsuarioPublico
+}
+note bottom of ServicoUsuario
+  Estes dois serviços concentram o
+  comportamento que a v1 modelava como
+  métodos de Usuario. É o que separa dados
+  de regra de negócio e permite testar a
+  regra sem banco.
+end note
+
+' ==================== Planejamento de viagem (NÃO IMPLEMENTADO) ====================
+class PlanejamentoViagem #line.dashed {
+  -id: UUID
+  -dataInicio: LocalDate
+  -dataFim: LocalDate
+  -preferenciaViagem: String
+  -orcamentoEstimado: BigDecimal
+  +gerarRoteiro()
+  +editarViaChat(instrucao: String)
+  +calcularOrcamentoEstimado(): BigDecimal
+}
+
+class EscopoGeografico #line.dashed {
+  -pontoCentral: Coordenada
+  -raioKm: Double
+}
+note right of EscopoGeografico
+  Opção B da equipe (raio de
+  deslocamento) — ver Regras de
+  Negócio. RF06.
+end note
+
+class Coordenada #line.dashed {
+  -latitude: Double
+  -longitude: Double
+}
+
+class Dia #line.dashed {
+  -data: LocalDate
+  +adicionarItem(item: ItemRoteiro)
+}
+
+class Alocacao #line.dashed {
+  -regiaoSugerida: String
+}
+note right of Alocacao
+  Cenário B: sugere região,
+  não fecha reserva.
+end note
+
+class ItemRoteiro #line.dashed {
+  -horario: LocalTime
+}
+
+enum TipoDestino #line.dashed {
+  PRINCIPAL
+  APOIO
+}
+
+class Destino #line.dashed {
+  -nome: String
+  -coordenadas: Coordenada
+  -tipo: TipoDestino
+}
+
+' ==================== Motor de IA (NÃO IMPLEMENTADO) ====================
+class ControladorRoteiro #line.dashed {
+  +formatarPrompt(p: PlanejamentoViagem): String
+  +processarResposta(resposta: String): PlanejamentoViagem
+  +persistir(p: PlanejamentoViagem)
+}
+
+interface ServicoIA #line.dashed {
+  +gerarRoteiro(prompt: String): String
+}
+note right of ServicoIA
+  Interface troca de provedor
+  sem reescrever a plataforma
+  — RNF02
+end note
+
+class ClaudeAdapter #line.dashed implements ServicoIA
+class OpenAIAdapter #line.dashed implements ServicoIA
+
+class MetricasUso #line.dashed {
+  -roteirosGerados: int
+  -usuariosAtivos: int
+  -chamadasApiIA: int
+}
+
+class ServicoAdministracao #line.dashed {
+  +moderarRoteiro(p: PlanejamentoViagem)
+  +banirUsuario(u: Usuario)
+  +consultarMetricas(): MetricasUso
+}
+note bottom of ServicoAdministracao
+  RF15, RF16, RF17. Substitui os métodos que
+  a v1 punha na subclasse Administrador.
+  O controle de acesso já existe: um guard
+  exige papel = ADMINISTRADOR (RNF10).
+  As rotas em si são da próxima entrega.
+end note
+
+' ==================== Relacionamentos ====================
+Usuario "1" *-- "1" PreferenciasGerais : possui
+Usuario "1" *-- "*" ContaSocial : vincula
+Usuario "1" *-- "*" RefreshToken : abre sessão
+Usuario "1" --> "1" Papel : papel
+ContaSocial "*" --> "1" ProvedorSocial : provedor
+
+ServicoAutenticacao ..> Usuario : cria e autentica >
+ServicoAutenticacao ..> ContaSocial : vincula >
+ServicoAutenticacao ..> RefreshToken : emite e revoga >
+ServicoUsuario ..> Usuario : lê e atualiza >
+ServicoUsuario ..> PreferenciasGerais : atualiza >
+
+Usuario "1" o-- "*" PlanejamentoViagem : cria >
+
+PlanejamentoViagem "1" *-- "1" EscopoGeografico : define
+PlanejamentoViagem "1" *-- "*" Dia : contém
+PlanejamentoViagem "1" o-- "*" Destino : destinos principais >
+
+EscopoGeografico "1" *-- "1" Coordenada : ponto central
+Destino "1" *-- "1" Coordenada : coordenadas
+
+Dia "1" *-- "1" Alocacao : possui
+Dia "1" *-- "*" ItemRoteiro : roteiro
+ItemRoteiro "*" --> "1" Destino : referencia >
+
+ControladorRoteiro ..> PlanejamentoViagem : orquestra >
+ControladorRoteiro ..> ServicoIA : usa >
+ServicoIA <|.. ClaudeAdapter
+ServicoIA <|.. OpenAIAdapter
+
+ServicoAdministracao ..> MetricasUso : consulta >
+ServicoAdministracao ..> Usuario : bane >
+ServicoAdministracao ..> PlanejamentoViagem : modera >
+
+@enduml

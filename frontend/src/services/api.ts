@@ -9,6 +9,20 @@ export const api = axios.create({
   timeout: 10000,
 });
 
+/**
+ * Monta o header de autenticacao para as chamadas que exigem sessao.
+ *
+ * Nao usamos um interceptor global de proposito: `api` e usada tanto no
+ * cliente quanto em Server Components, e `getSession` do next-auth/react so
+ * funciona no cliente. Passar o token explicitamente funciona nos dois lados
+ * e deixa visivel, na chamada, quais rotas precisam de sessao.
+ *
+ * No cliente: `const { data: sessao } = useSession()` -> `sessao?.backendToken`
+ * No servidor: `const sessao = await getServerSession(authOptions)`
+ */
+export const comToken = (token?: string) =>
+  token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
 export type DynamicParams = Record<string, unknown>;
 
 // Tipagem das opções de cache aceitas pelo Next.js
