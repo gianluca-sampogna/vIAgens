@@ -1,14 +1,15 @@
 # Backend — vIAgens
 
-Serviço NestJS de autenticação e usuário. Roda na porta 3333, que é a que o
-frontend espera em `NEXT_PUBLIC_API_URL`.
+Serviço NestJS de autenticação e usuário. Roda na porta `BACKEND_PORT` (3333), que
+é a que o frontend espera em `NEXT_PUBLIC_API_URL`.
 
 ## Como rodar
 
 ```bash
+cd ..                   # raiz do repositorio
+cp .env.example .env    # preencha os valores (ver README da raiz)
 cd backend
 yarn install
-cp .env.example .env    # preencha os valores
 # as migrations ja estao aplicadas; para reaplicar num projeto novo,
 # rode os arquivos de supabase/migrations/ em ordem no SQL Editor
 yarn start:dev
@@ -18,18 +19,24 @@ Verifique com `curl http://localhost:3333/saude` — deve responder `{"status":"
 
 ## Variáveis de ambiente
 
-Veja `.env.example`. Três armadilhas comuns:
+A configuração é **um único `.env` na raiz do repositório**, compartilhado com o
+frontend. O backend o lê de `../.env` (resolvido a partir do código, então não
+depende de qual pasta o processo foi iniciado). **Não crie `backend/.env`:** ele
+seria ignorado, e é exatamente o tipo de arquivo que faz alguém depurar uma
+variável que "não pega". A lista completa está em `.env.example`.
+
+Armadilhas comuns:
 
 - `SUPABASE_SERVICE_ROLE_KEY` tem que ser a chave **`service_role`**, não a publicável.
   A publicável esbarra no RLS, que nega tudo — o sintoma é toda consulta voltar vazia
-  em vez de dar erro de permissão, o que confunde. Essa chave dá acesso total ao banco:
-  ela só existe em `backend/.env`, nunca no `frontend/`, cujo bundle é público.
-- `GOOGLE_CLIENT_ID` tem que ser **idêntico** ao do frontend. É contra ele que o `aud`
-  do `id_token` é validado; se divergir, todo login social devolve 401.
-- Hoje `GOOGLE_CLIENT_ID` está **vazio** no `.env` deste projeto. O `VerificadorGoogle`
-  avisa isso no boot (log de warning) e `/auth/social-login` fica inoperante até alguém
-  do frontend informar o valor real. `/auth/registrar` e `/auth/login` funcionam
-  normalmente sem ele.
+  em vez de dar erro de permissão, o que confunde. Essa chave dá acesso total ao banco
+  e nunca pode ganhar o prefixo `NEXT_PUBLIC_`.
+- A porta é `BACKEND_PORT`, não `PORT`: o Next.js lê `PORT`, e o arquivo é compartilhado.
+- `GOOGLE_CLIENT_ID` é o mesmo valor que o frontend usa, porque é o mesmo arquivo. É
+  contra ele que o `aud` do `id_token` é validado.
+- Hoje `GOOGLE_CLIENT_ID` está **vazio**. O `VerificadorGoogle` avisa isso no boot (log
+  de warning) e `/auth/social-login` fica inoperante até alguém informar o valor real.
+  `/auth/registrar` e `/auth/login` funcionam normalmente sem ele.
 
 ## Rotas
 

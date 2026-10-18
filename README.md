@@ -60,8 +60,8 @@ Gabriel) trabalhar contra uma API estável, sem depender do ciclo de vida do
 Next.
 
 **Por que o backend fala com o banco, e não o frontend.** O frontend nunca toca
-o Supabase. Quem tem a chave `service_role` é só o backend, e ela nunca sai de
-`backend/.env`. Se ela chegasse ao bundle do Next, qualquer pessoa abriria o
+o Supabase. Quem usa a chave `service_role` é só o backend, e ela nunca vai
+para o navegador. Se ela chegasse ao bundle do Next, qualquer pessoa abriria o
 DevTools e leria a tabela de usuários inteira, hashes de senha incluídos.
 
 **Por que o backend valida o `id_token` do Google.** O frontend faz o fluxo
@@ -419,21 +419,40 @@ duas abordagens no mesmo projeto.
 
 Precisa de Node 22.22.3 ou superior.
 
-**1. Backend**
+**1. Configuração: um único `.env`, na raiz**
+
+```bash
+cp .env.example .env    # preencha os valores
+```
+
+Backend e frontend leem **este mesmo arquivo**. Não crie `.env` dentro de
+`backend/` nem de `frontend/`.
+
+| Variável | Quem usa | De onde vem |
+|---|---|---|
+| `SUPABASE_URL` | backend | painel do Supabase, Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | backend | Project Settings → API Keys → aba **Legacy** → `service_role` |
+| `JWT_SECRET` | backend | `openssl rand -base64 32` |
+| `NEXTAUTH_SECRET` | frontend | `openssl rand -base64 32` |
+| `GOOGLE_CLIENT_ID` | backend **e** frontend | Google Cloud Console (valor único, vale para os dois) |
+| `GOOGLE_CLIENT_SECRET` | frontend | Google Cloud Console |
+
+`SUPABASE_SERVICE_ROLE_KEY` precisa ser a `service_role`, não a publicável: a
+publicável esbarra no RLS, e o sintoma é toda consulta voltar vazia em vez de dar
+erro de permissão.
+
+A porta do backend é `BACKEND_PORT`, e não `PORT`: o Next.js também lê `PORT`, e
+como o arquivo agora é compartilhado as duas colidiriam.
+
+**2. Backend**
 
 ```bash
 cd backend
 yarn install
-cp .env.example .env    # preencha os valores
 yarn start:dev          # porta 3333
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` vem do painel do Supabase, em Project Settings →
-API Keys. Precisa ser a chave `service_role`, não a publicável: a publicável
-esbarra no RLS, e o sintoma é toda consulta voltar vazia em vez de dar erro de
-permissão.
-
-**2. Frontend**
+**3. Frontend**
 
 ```bash
 cd frontend
@@ -441,19 +460,15 @@ yarn install
 yarn dev                # porta 3000
 ```
 
-Crie `frontend/.env.local`:
+Como o `.env` é um só, `GOOGLE_CLIENT_ID` existe uma única vez: o backend o usa
+para validar o `aud` do `id_token`, e o frontend o usa para iniciar o fluxo do
+Google. Não há mais como os dois divergirem.
 
-```
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET=""      # openssl rand -base64 32
-GOOGLE_CLIENT_ID=""
-GOOGLE_CLIENT_SECRET=""
-NEXT_PUBLIC_API_URL="http://localhost:3333"
-```
-
-`GOOGLE_CLIENT_ID` precisa ser **idêntico** nos dois `.env`. É contra ele que o
-backend valida o `aud` do `id_token`; se divergirem, todo login social devolve
-401 sem dizer por quê.
+> **Segurança.** O frontend também carrega este arquivo, então a `service_role`
+> fica disponível ao processo do Next. O navegador só recebe variáveis com prefixo
+> `NEXT_PUBLIC_`, e nada no frontend lê a `service_role`. Por isso **nunca dê a
+> essa chave (nem a nenhum segredo) o prefixo `NEXT_PUBLIC_`**: quem faz isso a
+> publica no bundle.
 
 Confira com `curl http://localhost:3333/saude`, que deve responder
 `{"status":"ok"}`.
