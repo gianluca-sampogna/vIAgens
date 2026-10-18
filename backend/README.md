@@ -187,5 +187,5 @@ mexer no código:
   que nega tudo por padrão para qualquer outra chave. A segurança efetiva das rotas está
   inteiramente no código do NestJS — não há segunda linha de defesa no banco.
 - **Migrations são SQL versionado** em `supabase/migrations/`, aplicadas ao projeto
-  `ungwqcebvaczpkdajtec`. Schema novo significa arquivo novo, nunca edição de um já
+  `lzzeskzgtdndmtmprfzm`. Schema novo significa arquivo novo, nunca edição de um já
   aplicado.
