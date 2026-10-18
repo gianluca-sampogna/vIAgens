@@ -1,11 +1,11 @@
 /**
  * Tipos do banco, derivados do schema real do projeto Supabase
- * `lzzeskzgtdndmtmprfzm`.
+ * `mglopitnyzobhiavosmw`.
  *
  * O bloco `Database` e gerado, nao escrito a mao. Para regerar depois de uma
  * migration nova, use a ferramenta `generate_typescript_types` do MCP do
  * Supabase (ou `npx supabase gen types typescript --project-id
- * lzzeskzgtdndmtmprfzm`) e substitua o bloco.
+ * mglopitnyzobhiavosmw`) e substitua o bloco.
  *
  * Os apelidos no final sao nossos, nao gerados: a versao gerada traz genericos
  * elaborados para suportar varios schemas, e nos usamos so o `public`.
