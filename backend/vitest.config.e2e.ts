@@ -12,5 +12,13 @@ export default defineConfig({
     // outro arquivo acabou de criar (e cujo token ainda esta em uso),
     // causando 401/404 instaveis. Nao paralelizar por arquivo.
     fileParallelism: false,
+    // Cada requisicao faz varias idas ao Postgres hospedado (um cadastro faz
+    // quatro), mais hash argon2. Com o projeto fora do Brasil isso passa de
+    // 1s por requisicao, e os 5s/10s padrao do Vitest estouram. Pior que o
+    // timeout em si: a requisicao abortada continua em voo e insere o usuario
+    // depois que o beforeEach seguinte ja limpou, o que aparece como
+    // "duplicate key" sem relacao aparente com a causa.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
