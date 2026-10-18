@@ -34,9 +34,9 @@ Armadilhas comuns:
 - A porta é `BACKEND_PORT`, não `PORT`: o Next.js lê `PORT`, e o arquivo é compartilhado.
 - `GOOGLE_CLIENT_ID` é o mesmo valor que o frontend usa, porque é o mesmo arquivo. É
   contra ele que o `aud` do `id_token` é validado.
-- Hoje `GOOGLE_CLIENT_ID` está **vazio**. O `VerificadorGoogle` avisa isso no boot (log
-  de warning) e `/auth/social-login` fica inoperante até alguém informar o valor real.
-  `/auth/registrar` e `/auth/login` funcionam normalmente sem ele.
+- Sem `GOOGLE_CLIENT_ID` o backend sobe normalmente, mas o `VerificadorGoogle` registra um
+  warning no boot e `/auth/social-login` recusa todo token. `/auth/registrar` e
+  `/auth/login` não dependem dele.
 
 ## Rotas
 
@@ -134,11 +134,24 @@ const sessao = await getServerSession(authOptions);
 const { data } = await api.get("/usuarios/eu", comToken(sessao?.backendToken));
 ```
 
-### O que falta
+### Login com Google: o que precisa estar configurado
 
-`GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` estão vazios, então o botão
-"Continuar com Google" não funciona ainda — o backend avisa isso no boot. O
-login por e-mail e senha funciona por inteiro e não depende disso.
+O fluxo funciona de ponta a ponta, mas só com um cliente OAuth criado no Google
+Cloud (cada integrante pode usar o mesmo ou criar o seu):
+
+1. Console do Google Cloud → **Credenciais → Criar credenciais → ID do cliente OAuth**,
+   tipo **Aplicativo da Web**.
+2. Em *URIs de redirecionamento autorizados*, exatamente:
+   `http://localhost:3000/api/auth/callback/google` (com `http`, porta `3000` e sem
+   barra no final).
+3. Se o app estiver em modo *Teste* (o normal para um trabalho de curso), cadastre em
+   *Usuários de teste* o e-mail de quem vai entrar. Sem isso o Google devolve
+   `access_denied`.
+4. Preencha `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` no `.env` da raiz e reinicie os
+   dois servidores, que só leem o arquivo na subida.
+
+Quem entra pelo Google com um e-mail que já tinha cadastro por senha é vinculado à
+conta existente, e a senha continua valendo.
 
 
 ## Testes

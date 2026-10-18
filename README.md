@@ -25,8 +25,8 @@ Funcionando ponta a ponta:
 - Login por e-mail e senha
 - Sessão que se renova sozinha, com logout que revoga de verdade
 - Tela de perfil lendo dados reais do banco
-- Login pelo Google — **implementado, mas inoperante** enquanto
-  `GOOGLE_CLIENT_ID` não for preenchido
+- Login pelo Google, com vinculação automática a uma conta que já existia por
+  e-mail e senha
 
 ---
 
@@ -498,7 +498,6 @@ reative `fileParallelism`.
 
 | Item | Bloqueado por |
 |---|---|
-| Login pelo Google funcionar | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` |
 | Geração de roteiro por IA (`ServicoIA`, adapters) | próxima entrega |
 | `PlanejamentoViagem`, `Dia`, `ItemRoteiro`, `Destino` | próxima entrega |
 | Rotas administrativas (RF15–RF17) | próxima entrega; o `PapeisGuard` já existe |
@@ -514,7 +513,7 @@ reative `fileParallelism`.
 
 | ID | Requisito | Situação |
 |---|---|---|
-| RF01 | Criar conta e fazer login | Atendido (e-mail/senha; Google pendente de credencial) |
+| RF01 | Criar conta e fazer login | Atendido (e-mail/senha e Google) |
 | RF02 | Editar dados cadastrais e preferências | Atendido na API; falta a tela |
 | RF03 | Histórico de roteiros | Próxima entrega |
 | RF04–RF07 | Criar planejamento de viagem | Próxima entrega |
