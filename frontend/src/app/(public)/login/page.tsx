@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import styles from "./styles.module.css";
 
@@ -18,14 +18,34 @@ const MENSAGENS_DE_ERRO: Record<string, string> = {
   CredentialsSignin: MENSAGEM_CREDENCIAIS,
 };
 
-export default function Login() {
+/**
+ * Erros que o NextAuth devolve na URL (`/login?error=...`) quando o fluxo do
+ * Google falha ANTES de sair do nosso site. Sem isto a pagina so recarregava,
+ * e o clique parecia nao fazer nada.
+ */
+const MENSAGENS_DE_ERRO_NA_URL: Record<string, string> = {
+  OAuthSignin:
+    "Não foi possível iniciar o login com Google. Confira se GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET estão configurados.",
+  Configuration:
+    "O login com Google está mal configurado. Use e-mail e senha por enquanto.",
+  OAuthCallback: "O Google recusou o login. Tente novamente.",
+  AccessDenied: "Acesso negado.",
+};
+
+function FormularioLogin() {
   const router = useRouter();
+  const parametros = useSearchParams();
+  const erroDaUrl = parametros.get("error");
 
   const [aba, setAba] = useState<Aba>("entrar");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(() =>
+    erroDaUrl
+      ? (MENSAGENS_DE_ERRO_NA_URL[erroDaUrl] ?? MENSAGEM_GENERICA)
+      : null,
+  );
   const [carregando, setCarregando] = useState(false);
 
   const criando = aba === "criar";
@@ -166,5 +186,15 @@ export default function Login() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  // useSearchParams exige Suspense em rota prerenderizada; sem ele o build de
+  // producao falha com "Missing Suspense boundary".
+  return (
+    <Suspense fallback={null}>
+      <FormularioLogin />
+    </Suspense>
   );
 }
