@@ -417,112 +417,48 @@ duas abordagens no mesmo projeto.
 
 ## Como rodar
 
-**Pré-requisitos**
+**Pré-requisitos:** Node 22.22.3+, Yarn (`npm install -g yarn`) e uma conta no Supabase.
 
-- Node 22.22.3 ou superior
-- Yarn (`npm install -g yarn`, ou `corepack enable` se o seu Node já o traz)
-- Uma conta no Supabase (plano gratuito basta)
+**1. Banco.** Crie um projeto no Supabase na região **`sa-east-1` (São Paulo)**. No
+**SQL Editor**, rode **em ordem** os 3 arquivos de `backend/supabase/migrations/`
+(`0001`, `0002`, `0003`). Ou peça convite ao projeto do grupo (organização "Viagens").
 
-**0. Banco de dados (Supabase)**
-
-Nada funciona sem o banco, então este é o primeiro passo. Há dois caminhos:
-
-- **Usar o projeto do grupo.** Peça a quem criou a organização "Viagens" no Supabase
-  para convidar você (*Organization Settings → Team*). Depois pegue a URL e a chave
-  `service_role` no painel do projeto.
-- **Criar um projeto seu.** Crie no painel e escolha a região **`sa-east-1` (São
-  Paulo)**: a região não pode ser trocada depois, e fora do Brasil cada consulta fica
-  uns 4 vezes mais lenta (medimos 62 ms contra 251 ms). Em seguida abra o **SQL
-  Editor** e rode, **nesta ordem**, os três arquivos de `backend/supabase/migrations/`:
-  `0001_inicial.sql`, `0002_vincular_ou_criar_por_google.sql` e
-  `0003_fixa_search_path_do_trigger.sql`.
-
-Para conferir, a aba *Table Editor* deve mostrar 4 tabelas: `usuario`, `conta_social`,
-`preferencias_gerais` e `refresh_token`, todas com RLS ligado.
-
-**1. Configuração: um único `.env`, na raiz**
+**2. Configurar.** Um único `.env`, na raiz, lido por backend e frontend:
 
 ```bash
-cp .env.example .env    # preencha os valores
+cp .env.example .env
 ```
 
-Backend e frontend leem **este mesmo arquivo**. Não crie `.env` dentro de
-`backend/` nem de `frontend/`.
+| Variável | Onde pegar |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API. Use a chave **`service_role`** (aba *Legacy*), não a publicável |
+| `JWT_SECRET`, `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Opcional: só para o login com Google ([passo a passo](backend/README.md)) |
 
-| Variável | Quem usa | De onde vem |
-|---|---|---|
-| `SUPABASE_URL` | backend | painel do Supabase, Project Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | backend | Project Settings → API Keys → aba **Legacy** → `service_role` |
-| `JWT_SECRET` | backend | `openssl rand -base64 32` |
-| `NEXTAUTH_SECRET` | frontend | `openssl rand -base64 32` |
-| `GOOGLE_CLIENT_ID` | backend **e** frontend | Google Cloud Console (valor único, vale para os dois) |
-| `GOOGLE_CLIENT_SECRET` | frontend | Google Cloud Console |
-
-`SUPABASE_SERVICE_ROLE_KEY` precisa ser a `service_role`, não a publicável: a
-publicável esbarra no RLS, e o sintoma é toda consulta voltar vazia em vez de dar
-erro de permissão.
-
-A porta do backend é `BACKEND_PORT`, e não `PORT`: o Next.js também lê `PORT`, e
-como o arquivo agora é compartilhado as duas colidiriam.
-
-**2. Instalar as dependências** (só na primeira vez)
+**3. Instalar e rodar.**
 
 ```bash
 yarn install
-```
-
-```bash
 yarn --cwd backend install
-```
-
-```bash
 yarn --cwd frontend install
-```
-
-O primeiro instala o `concurrently`, que é o que permite subir os dois servidores com
-um comando só.
-
-**3. Subir tudo com um comando**
-
-```bash
 yarn dev
 ```
 
-Isso sobe o **backend** (porta 3333) e o **frontend** (porta 3000) no mesmo terminal, com
-a saída de cada um prefixada por `[back]` e `[front]`. `Ctrl+C` encerra os dois.
+O `yarn dev` sobe o backend (`:3333`) e o frontend (`:3000`) juntos, com a saída
+prefixada por `[back]` e `[front]`. `Ctrl+C` encerra os dois. Nas próximas vezes, só
+`yarn dev`.
 
-Se preferir um terminal para cada um:
+**4. Entrar.** Abra `http://localhost:3000`, clique em *Acessar* → aba **Criar conta** e
+cadastre-se com e-mail e senha (8+ caracteres).
 
-```bash
-yarn dev:back
-```
+**Problemas comuns**
 
-```bash
-yarn dev:front
-```
+- *Consultas voltam vazias, sem erro:* a chave do Supabase é a publicável. Troque pela `service_role`.
+- *`yarn` não encontrado:* `npm install -g yarn`.
+- *Erro no login com Google:* veja *Login com Google* no [`backend/README.md`](backend/README.md).
+- Nunca coloque o prefixo `NEXT_PUBLIC_` em um segredo: ele vai para o navegador.
 
-**4. Abrir e entrar**
-
-Acesse `http://localhost:3000`, clique em *Acessar*, escolha a aba **Criar conta** e
-cadastre-se com e-mail e senha (mínimo 8 caracteres). Você entra direto no painel.
-
-O botão **Continuar com Google** só funciona depois de criar um cliente OAuth no Google
-Cloud e preencher `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. O passo a passo, com os
-erros mais comuns, está na seção *Login com Google* de [`backend/README.md`](backend/README.md).
-Sem isso, o login por e-mail e senha funciona normalmente.
-
-Como o `.env` é um só, `GOOGLE_CLIENT_ID` existe uma única vez: o backend o usa
-para validar o `aud` do `id_token`, e o frontend o usa para iniciar o fluxo do
-Google. Não há mais como os dois divergirem.
-
-> **Segurança.** O frontend também carrega este arquivo, então a `service_role`
-> fica disponível ao processo do Next. O navegador só recebe variáveis com prefixo
-> `NEXT_PUBLIC_`, e nada no frontend lê a `service_role`. Por isso **nunca dê a
-> essa chave (nem a nenhum segredo) o prefixo `NEXT_PUBLIC_`**: quem faz isso a
-> publica no bundle.
-
-Confira com `curl http://localhost:3333/saude`, que deve responder
-`{"status":"ok"}`.
+Conferir o backend: `curl http://localhost:3333/saude` → `{"status":"ok"}`.
 
 ---
 
