@@ -465,20 +465,40 @@ erro de permissão.
 A porta do backend é `BACKEND_PORT`, e não `PORT`: o Next.js também lê `PORT`, e
 como o arquivo agora é compartilhado as duas colidiriam.
 
-**2. Backend**
+**2. Instalar as dependências** (só na primeira vez)
 
 ```bash
-cd backend
 yarn install
-yarn start:dev          # porta 3333
 ```
 
-**3. Frontend**
+```bash
+yarn --cwd backend install
+```
 
 ```bash
-cd frontend
-yarn install
-yarn dev                # porta 3000
+yarn --cwd frontend install
+```
+
+O primeiro instala o `concurrently`, que é o que permite subir os dois servidores com
+um comando só.
+
+**3. Subir tudo com um comando**
+
+```bash
+yarn dev
+```
+
+Isso sobe o **backend** (porta 3333) e o **frontend** (porta 3000) no mesmo terminal, com
+a saída de cada um prefixada por `[back]` e `[front]`. `Ctrl+C` encerra os dois.
+
+Se preferir um terminal para cada um:
+
+```bash
+yarn dev:back
+```
+
+```bash
+yarn dev:front
 ```
 
 **4. Abrir e entrar**

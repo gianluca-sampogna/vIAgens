@@ -1,0 +1,13 @@
+{
+  "name": "viagens",
+  "private": true,
+  "description": "Monorepo do vIAgens: backend (NestJS) e frontend (Next.js).",
+  "scripts": {
+    "dev": "concurrently --names back,front --prefix-colors blue,magenta --kill-others-on-fail \"npm --prefix backend run start:dev\" \"npm --prefix frontend run dev\"",
+    "dev:back": "npm --prefix backend run start:dev",
+    "dev:front": "npm --prefix frontend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

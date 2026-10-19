@@ -18,7 +18,12 @@ loadEnvConfig(
 );
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // O repositorio e um monorepo com um package.json/yarn.lock na raiz (para o
+  // comando unico `yarn dev`), alem dos de backend/ e frontend/. Sem isto o
+  // Next infere a raiz do projeto errada e avisa sobre varios lockfiles.
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;
