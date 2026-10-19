@@ -417,7 +417,28 @@ duas abordagens no mesmo projeto.
 
 ## Como rodar
 
-Precisa de Node 22.22.3 ou superior.
+**Pré-requisitos**
+
+- Node 22.22.3 ou superior
+- Yarn (`npm install -g yarn`, ou `corepack enable` se o seu Node já o traz)
+- Uma conta no Supabase (plano gratuito basta)
+
+**0. Banco de dados (Supabase)**
+
+Nada funciona sem o banco, então este é o primeiro passo. Há dois caminhos:
+
+- **Usar o projeto do grupo.** Peça a quem criou a organização "Viagens" no Supabase
+  para convidar você (*Organization Settings → Team*). Depois pegue a URL e a chave
+  `service_role` no painel do projeto.
+- **Criar um projeto seu.** Crie no painel e escolha a região **`sa-east-1` (São
+  Paulo)**: a região não pode ser trocada depois, e fora do Brasil cada consulta fica
+  uns 4 vezes mais lenta (medimos 62 ms contra 251 ms). Em seguida abra o **SQL
+  Editor** e rode, **nesta ordem**, os três arquivos de `backend/supabase/migrations/`:
+  `0001_inicial.sql`, `0002_vincular_ou_criar_por_google.sql` e
+  `0003_fixa_search_path_do_trigger.sql`.
+
+Para conferir, a aba *Table Editor* deve mostrar 4 tabelas: `usuario`, `conta_social`,
+`preferencias_gerais` e `refresh_token`, todas com RLS ligado.
 
 **1. Configuração: um único `.env`, na raiz**
 
@@ -459,6 +480,16 @@ cd frontend
 yarn install
 yarn dev                # porta 3000
 ```
+
+**4. Abrir e entrar**
+
+Acesse `http://localhost:3000`, clique em *Acessar*, escolha a aba **Criar conta** e
+cadastre-se com e-mail e senha (mínimo 8 caracteres). Você entra direto no painel.
+
+O botão **Continuar com Google** só funciona depois de criar um cliente OAuth no Google
+Cloud e preencher `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`. O passo a passo, com os
+erros mais comuns, está na seção *Login com Google* de [`backend/README.md`](backend/README.md).
+Sem isso, o login por e-mail e senha funciona normalmente.
 
 Como o `.env` é um só, `GOOGLE_CLIENT_ID` existe uma única vez: o backend o usa
 para validar o `aud` do `id_token`, e o frontend o usa para iniciar o fluxo do
